@@ -1,1 +1,11 @@
-{"docker":1,"nextjs":1,"web":1,"next-js":3,"tailwind":2,"guide":3,"holiday":1,"canada":1,"images":1}
+{
+  "docker": 1,
+  "nextjs": 1,
+  "web": 1,
+  "next-js": 3,
+  "guide": 3,
+  "tailwind": 2,
+  "holiday": 1,
+  "canada": 1,
+  "images": 1
+}

@@ -6,7 +6,7 @@ const siteMetadata = {
   description: '技术&摄影',
   language: 'zh-cn',
   theme: 'system', // system, dark or light
-  // siteUrl: '',
+  siteUrl: 'https://hlovez.life',
   siteRepo: 'https://github.com/h-yw/ifcat',
   siteLogo: '/static/images/logo.png',
   socialBanner: '/static/images/twitter-card.png',
