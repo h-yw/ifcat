@@ -1,0 +1,58 @@
+FROM node:20.15.1-alpine AS base
+
+ENV NODE_ENV production
+ENV APP_PATH /app
+
+# 添加源
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
+
+
+# Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
+RUN apk add --no-cache libc6-compat
+
+# 使用apk命令安装 yarn
+# RUN apk add --no-cache --update yarn
+# Install dependencies only when needed
+FROM base AS deps
+
+WORKDIR $APP_PATH  
+RUN npm uninstall yarn -g \
+    && corepack enable \
+    && corepack prepare yarn@3.6.1 --activate \
+    && yarn config set --json -H unsafeHttpWhitelist '["*.npmjs.org"]'  \
+    && yarn config set -H   enableStrictSsl false \
+    && yarn config set -H  npmRegistryServer https://registry.npm.taobao.org 
+
+COPY package.json  ./
+RUN \
+    if [ -f yarn.lock ]; then yarn install ; \
+    elif [ -f package-lock.json ]; then npm ci; \
+    elif [ -f pnpm-lock.yaml ]; then yarn global add pnpm && pnpm i --frozen-lockfile; \
+    else echo "Lockfile not found." && exit 1; \
+    fi
+
+FROM base AS builder
+WORKDIR $APP_PATH
+COPY --from=deps $APP_PATH/node_modules ./node_modules
+COPY . .
+
+RUN yarn build
+
+FROM base AS runner
+
+WORKDIR $APP_PATH
+
+RUN mkdir .next
+
+COPY --from=builder --chown=1000:100 $APP_PATH/.next/standalone ./
+COPY --from=builder --chown=1000:100 $APP_PATH/.next/static ./static
+
+# USER nextjs
+
+EXPOSE 3000
+
+ENV PORT 3000
+ENV HOSTNAME "0.0.0.0"
+# server.js is created by next build from the standalone output
+# https://nextjs.org/docs/pages/api-reference/next-config-js/output
+CMD node server.js
