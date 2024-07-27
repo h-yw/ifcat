@@ -25,7 +25,9 @@ export default function Footer() {
           <Link href="/">{siteMetadata.title}</Link>
         </div>
         <div className="mb-8 text-sm text-gray-500 dark:text-gray-400">
-          <Link href="https://github.com/timlrx/tailwind-nextjs-starter-blog">ifcat</Link>
+          <Link href="https://beian.miit.gov.cn/" target="_blank">
+            豫ICP备2022028590号-1
+          </Link>
         </div>
       </div>
     </footer>
