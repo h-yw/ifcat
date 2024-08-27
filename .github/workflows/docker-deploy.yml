@@ -36,6 +36,8 @@ jobs:
           NEW_VERSION="$major.$minor.$patch"
           echo "$NEW_VERSION" > .version
           echo "::set-output name=new_version::$NEW_VERSION"
+          echo "NEW_VERSION=${NEW_VERSION}" >> $GITHUB_ENV
+
           
       - name: Build Docker image
         run: |
