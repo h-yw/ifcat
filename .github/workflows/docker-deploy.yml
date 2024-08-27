@@ -21,6 +21,8 @@ jobs:
         run: |
           VERSION=$(cat .version)
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
+          echo "Read version: $VERSION"
+
 
       - name: Increment version
         id: increment_version
@@ -30,12 +32,16 @@ jobs:
           patch=$((patch + 1))
           NEW_VERSION="$major.$minor.$patch"
           echo "$NEW_VERSION" > .version
-          echo "VERSION=${NEW_VERSION}" >> $GITHUB_ENV
+          echo "NEW_VERSION=${NEW_VERSION}" >> $GITHUB_ENV
+          echo "Incremented version: $NEW_VERSION"
           
+      - name: Debug NEW_VERSION
+        run: echo "NEW_VERSION=${{ env.NEW_VERSION }}"
+
       - name: Build Docker image
         run: |
           docker build -t moonhou/ifcat:${{ env.NEW_VERSION }} .
-
+      
       - name: Save Docker image to tar file
         run: |
           docker save moonhou/ifcat:${{ env.NEW_VERSION }} -o ifcat-v${{ env.NEW_VERSION }}.tar
