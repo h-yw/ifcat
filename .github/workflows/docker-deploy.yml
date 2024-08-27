@@ -58,7 +58,7 @@ jobs:
       - name: Upload Docker image tar file as artifact
         uses: actions/upload-artifact@v3
         with:
-          name: docker-imagev
+          name: docker-image
           path: ifcat-v${{ env.NEW_VERSION }}.tar
       
   deploy:
