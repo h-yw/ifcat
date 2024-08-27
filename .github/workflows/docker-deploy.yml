@@ -71,7 +71,10 @@ jobs:
           name: docker-image
       - name: Debug NEW_VERSION in deploy job
         run: echo "Deploying version ${{ needs.build.outputs.new_version }}"
-        
+
+      - name: Install sshpass
+        run: sudo apt-get install -y sshpass
+      
       - name: SCP Docker image tar file to server
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
@@ -79,4 +82,4 @@ jobs:
           SERVER_IP: ${{ secrets.SERVER_IP }}
           DEST_PATH: ${{ secrets.SERVER_PATH }}
         run: |
-          scp -i $SSH_PRIVATE_KEY ifcat-v${{ needs.build.outputs.new_version }}.tar $SERVER_USER@$SERVER_IP:$DEST_PATH/ifcat-v${{ needs.build.outputs.new_version }}.tar
+          sshpass -p $SSH_PRIVATE_KEY scp ifcat-v${{ needs.build.outputs.new_version }}.tar $SERVER_USER@$SERVER_IP:$DEST_PATH/ifcat-v${{ needs.build.outputs.new_version }}.tar
