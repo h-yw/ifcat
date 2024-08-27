@@ -9,6 +9,10 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+      
+    outputs:
+      new_version: ${{ steps.increment_version.outputs.new_version }}
+      
     steps:
       - name: Check out the code
         uses: actions/checkout@v4
@@ -32,32 +36,41 @@ jobs:
           patch=$((patch + 1))
           NEW_VERSION="$major.$minor.$patch"
           echo "$NEW_VERSION" > .version
-          echo "NEW_VERSION=${NEW_VERSION}" >> $GITHUB_ENV
-          echo "Incremented version: $NEW_VERSION"
+          echo "::set-output name=new_version::$NEW_VERSION"
           
-      - name: Debug NEW_VERSION
-        run: echo "NEW_VERSION=${{ env.NEW_VERSION }}"
-
       - name: Build Docker image
         run: |
-          docker build -t moonhou/ifcat:${{ env.NEW_VERSION }} .
+          docker build -t moonhou/ifcat:${{ NEW_VERSION }} .
       
       - name: Save Docker image to tar file
         run: |
-          docker save moonhou/ifcat:${{ env.NEW_VERSION }} -o ifcat-v${{ env.NEW_VERSION }}.tar
+          docker save moonhou/ifcat:${{ NEW_VERSION }} -o ifcat-v${{ NEW_VERSION }}.tar
       
       - name: Commit and push version update
         uses: EndBug/add-and-commit@v9
         with:
           add: '.version'
-          message: 'Bump version to ${{ env.NEW_VERSION }}'
+          message: 'Bump version to ${{ NEW_VERSION }}'
           author_name: 'github-actions'
           author_email: 'github-actions@github.com'
+
+      - name: Upload Docker image tar file as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: docker-imagev
+          path: ifcat-v${{ env.NEW_VERSION }}.tar
       
   deploy:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - name: Download Docker image tar file
+        uses: actions/download-artifact@v3
+        with:
+          name: docker-image
+      - name: Debug NEW_VERSION in deploy job
+        run: echo "Deploying version ${{ needs.build.outputs.new_version }}"
+        
       - name: SCP Docker image tar file to server
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
@@ -65,4 +78,4 @@ jobs:
           SERVER_IP: ${{ secrets.SERVER_IP }}
           DEST_PATH: ${{ secrets.SERVER_PATH }}
         run: |
-          scp -i $SSH_PRIVATE_KEY ifcat-v${{ env.NEW_VERSION }}.tar $SERVER_USER@$SERVER_IP:$DEST_PATH/ifcat-v${{ env.NEW_VERSION }}.tar
+          scp -i $SSH_PRIVATE_KEY ifcat-v${{ needs.build.outputs.new_version }}.tar $SERVER_USER@$SERVER_IP:$DEST_PATH/ifcat-v${{ needs.build.outputs.new_version }}.tar
