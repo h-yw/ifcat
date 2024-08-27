@@ -57,6 +57,6 @@ jobs:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           SERVER_USER: ${{ secrets.SERVER_USER }}
           SERVER_IP: ${{ secrets.SERVER_IP }}
-          DEST_PATH: /home/hz
+          DEST_PATH: ${{ secrets.SERVER_PATH }}
         run: |
-          scp -i $SSH_PRIVATE_KEY ifcat-v${{ env.NEW_VERSION }}.tar $SERVER_USER@$SERVER_IP:$DEST_PATH
+          scp -i $SSH_PRIVATE_KEY ifcat-v${{ env.NEW_VERSION }}.tar $SERVER_USER@$SERVER_IP:$DEST_PATH/ifcat-v${{ env.NEW_VERSION }}.tar
