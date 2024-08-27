@@ -74,7 +74,12 @@ jobs:
 
       - name: Install sshpass
         run: sudo apt-get install -y sshpass
-      
+        
+      - name: Add SSH host key
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
+          
       - name: SCP Docker image tar file to server
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
@@ -82,4 +87,4 @@ jobs:
           SERVER_IP: ${{ secrets.SERVER_IP }}
           DEST_PATH: ${{ secrets.SERVER_PATH }}
         run: |
-          sshpass -p $SSH_PRIVATE_KEY scp ifcat-v${{ needs.build.outputs.new_version }}.tar $SERVER_USER@$SERVER_IP:$DEST_PATH/ifcat-v${{ needs.build.outputs.new_version }}.tar
+          sshpass -p $SSH_PRIVATE_KEY scp -o StrictHostKeyChecking=no ifcat-v${{ needs.build.outputs.new_version }}.tar $SERVER_USER@$SERVER_IP:$DEST_PATH/ifcat-v${{ needs.build.outputs.new_version }}.tar
