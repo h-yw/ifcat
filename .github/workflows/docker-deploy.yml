@@ -41,17 +41,17 @@ jobs:
           
       - name: Build Docker image
         run: |
-          docker build -t moonhou/ifcat:${{ NEW_VERSION }} .
+          docker build -t moonhou/ifcat:${{ env.NEW_VERSION }} .
       
       - name: Save Docker image to tar file
         run: |
-          docker save moonhou/ifcat:${{ NEW_VERSION }} -o ifcat-v${{ NEW_VERSION }}.tar
+          docker save moonhou/ifcat:${{ env.NEW_VERSION }} -o ifcat-v${{ env.NEW_VERSION }}.tar
       
       - name: Commit and push version update
         uses: EndBug/add-and-commit@v9
         with:
           add: '.version'
-          message: 'Bump version to ${{ NEW_VERSION }}'
+          message: 'Bump version to ${{ env.NEW_VERSION }}'
           author_name: 'github-actions'
           author_email: 'github-actions@github.com'
 
