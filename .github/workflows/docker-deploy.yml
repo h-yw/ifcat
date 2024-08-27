@@ -25,7 +25,6 @@ jobs:
         run: |
           VERSION=$(cat .version)
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
-          echo "Read version: $VERSION"
 
 
       - name: Increment version
