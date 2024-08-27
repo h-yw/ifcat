@@ -1,0 +1,62 @@
+# Inspired from https://github.com/actions/starter-workflows/blob/main/pages/nextjs.yml
+name: Build Docker Image
+
+on:
+  push:
+    branches: main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+        
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Read current version
+        id: get_version
+        run: |
+          VERSION=$(cat .version)
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+
+      - name: Increment version
+        id: increment_version
+        run: |
+          VERSION=$(cat .version)
+          IFS='.' read -r major minor patch <<< "$VERSION"
+          patch=$((patch + 1))
+          NEW_VERSION="$major.$minor.$patch"
+          echo "$NEW_VERSION" > .version
+          echo "VERSION=${NEW_VERSION}" >> $GITHUB_ENV
+          
+      - name: Build Docker image
+        run: |
+          docker build -t moonhou/ifcat:${{ env.NEW_VERSION }} .
+
+      - name: Save Docker image to tar file
+        run: |
+          docker save moonhou/ifcat:${{ env.NEW_VERSION }} -o ifcat-v${{ env.NEW_VERSION }}.tar
+      
+      - name: Commit and push version update
+        uses: EndBug/add-and-commit@v9
+        with:
+          add: '.version'
+          message: 'Bump version to ${{ env.NEW_VERSION }}'
+          author_name: 'github-actions'
+          author_email: 'github-actions@github.com'
+      
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: SCP Docker image tar file to server
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_IP: ${{ secrets.SERVER_IP }}
+          DEST_PATH: /home/hz
+        run: |
+          scp -i $SSH_PRIVATE_KEY ifcat-v${{ env.NEW_VERSION }}.tar $SERVER_USER@$SERVER_IP:$DEST_PATH
