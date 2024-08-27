@@ -12,14 +12,16 @@ const siteMetadata = {
   socialBanner: '/static/images/twitter-card.png',
   // mastodon: 'https://mastodon.social/@mastodonuser',
   email: '1327603193@qq.com',
-  // github: 'https://github.com',
-  // x: 'https://twitter.com/x',
+  github: 'https://github.com/h-yw',
+  x: 'https://x.com/Luckydog_H?s=09',
   // twitter: 'https://twitter.com/Twitter',
   // facebook: 'https://facebook.com',
   // youtube: 'https://youtube.com',
   // linkedin: 'https://www.linkedin.com',
   // threads: 'https://www.threads.net',
   // instagram: 'https://www.instagram.com',
+  viewOnGithub: true,
+  discussOnTwitter: false,
   locale: 'zh-CN',
   analytics: {
     // If you want to use an analytics provider you have to add it to the
@@ -41,9 +43,9 @@ const siteMetadata = {
     // posthogAnalytics: {
     //   posthogProjectApiKey: '', // e.g. 123e4567-e89b-12d3-a456-426614174000
     // },
-    // googleAnalytics: {
-    //   googleAnalyticsId: '', // e.g. G-XXXXXXX
-    // },
+    googleAnalytics: {
+      googleAnalyticsId: 'G-926Q791919', // e.g. G-XXXXXXX
+    },
   },
   newsletter: {
     // supports mailchimp, buttondown, convertkit, klaviyo, revue, emailoctopus
@@ -77,7 +79,9 @@ const siteMetadata = {
       // example: https://giscus.app/themes/custom_example.css
       themeURL: '',
       // This corresponds to the `data-lang="en"` in giscus's configurations
-      lang: 'en',
+      lang: 'zh-CN',
+      inputPosition: 'top', // top, bottom
+      loading: 'lazy', // lazy, eager, auto
     },
   },
   search: {
@@ -96,4 +100,5 @@ const siteMetadata = {
   },
 }
 
+console.log(siteMetadata.comments)
 module.exports = siteMetadata
