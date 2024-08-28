@@ -97,7 +97,7 @@ jobs:
           DEST_PATH: ${{ secrets.SERVER_PATH }}
           IMG_VERSION: ${{ needs.build.outputs.new_version }}
         run: |
-          sshpass -p $SSH_PRIVATE_KEY ssh -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP
+          sshpass -p $SSH_PRIVATE_KEY ssh $SERVER_USER@$SERVER_IP
           echo "login server successfully"
           docker load -i ./ifcat-v$IMG_VERSION.tar
           echo "img load successfully"
