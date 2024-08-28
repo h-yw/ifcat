@@ -72,8 +72,8 @@ jobs:
       - name: Debug NEW_VERSION in deploy job
         run: echo "Deploying version ${{ needs.build.outputs.new_version }}"
 
-      # - name: Install sshpass
-      #   run: sudo apt-get install -y sshpass
+      - name: Install sshpass
+        run: sudo apt-get install -y openssh-client sshpass 
       # sshpass -p $SSH_PRIVATE_KEY
       - name: Add SSH host key
         run: |
@@ -88,4 +88,26 @@ jobs:
           SERVER_IP: ${{ secrets.SERVER_IP }}
           DEST_PATH: ${{ secrets.SERVER_PATH }}
         run: |
-          scp -i $SERVER_PRIVATE_KEY -o StrictHostKeyChecking=no ifcat-v${{ needs.build.outputs.new_version }}.tar $SERVER_USER@$SERVER_IP:$DEST_PATH/ifcat-v${{ needs.build.outputs.new_version }}.tar
+          sshpass -p $SSH_PRIVATE_KEY scp -o StrictHostKeyChecking=no ifcat-v${{ needs.build.outputs.new_version }}.tar $SERVER_USER@$SERVER_IP:$DEST_PATH/ifcat-v${{ needs.build.outputs.new_version }}.tar
+
+      - name: SSH into server and execute commands
+        env:
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_IP: ${{ secrets.SERVER_IP }}
+          DEST_PATH: ${{ secrets.SERVER_PATH }}
+          IMG_VERSION: ${{ needs.build.outputs.new_version }}
+        run: |
+          sshpass -p $SSH_PRIVATE_KEY ssh -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP
+          echo "login server successfully"
+          docker load -i ./ifcat-v$IMG_VERSION.tar
+          echo "img load successfully"
+          docker stop ifcat
+          echo "old server stoped"
+          docker rm ifcat
+          echo "rm old container"
+          docker image rm moonhou/ifcat:$IMG_VERSION
+          echo "rm old img successfully"
+          docker run -d --name ifcat -p 3000:3000 moonhou/ifcat:$IMG_VERSION
+          echo "deploy new img successfully"
+          
+          
