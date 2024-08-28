@@ -91,6 +91,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         color="#5bbad5"
       />
       <meta name="baidu-site-verification" content="codeva-F7vCLDHpF4" />
+      <meta name="msvalidate.01" content="F4A402719065309DDBD9A4899DD67DD3" />
       <meta name="msapplication-TileColor" content="#000000" />
       <meta name="theme-color" media="(prefers-color-scheme: light)" content="#fff" />
       <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000" />
