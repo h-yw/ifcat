@@ -105,9 +105,10 @@ jobs:
           echo "login server successfully"
           docker load -i ./ifcat-v$IMG_VERSION.tar
           echo "img load successfully"
-          docker stop ifcat
-          echo "old server stoped"
-          docker rm ifcat
+          # docker stop ifcat
+          # echo "old server stoped"
+          # docker rm ifcat
+          docker rm -f ifcat
           echo "rm old container"
           docker image rm moonhou/ifcat:$OLD_VERSION
           echo "rm old img successfully"
