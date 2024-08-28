@@ -3,20 +3,27 @@ title: Docker部署nextjs项目
 date: 2023-07-27
 tags: [docker, nextjs, web]
 draft: false
-summary: 关于这个blog使用docker部署的过程
+summary: 本博客使用nextjs作为前端框架，使用docker部署,使用了tailwind css的一个模板。记录一下如何使用Docker部署一个Next.js项目。通过使用Docker，我们可以将应用程序与其依赖项打包成一个可移植的镜像，方便在任何支持Docker的环境中运行。
 ---
 
 ## 前言
 
-本博客使用nextjs作为前端框架，使用docker部署。
+本博客使用nextjs作为前端框架，使用docker部署,使用了tailwind css的一个模板。
+记录一下如何使用Docker部署一个Next.js项目。通过使用Docker，我们可以将应用程序与其依赖项打包成一个可移植的镜像，方便在任何支持Docker的环境中运行。
 
 <TOCInline toc={props.toc} exclude="Overview" toHeading={2} />
 
-## Dockerfile 内容
+### 创建Dockerfile
+
+首先，我们需要创建一个`Dockerfile`文件。以下是一个示例`Dockerfile`，该文件分为三个阶段：`base`、`builder`和`runner`。
 
 ```Dockerfile:Dockerfile
+
+# 使用Node.js的alpine版本作为基础镜像，构建镜像时减小体积
 FROM node:20.15.1-alpine AS base
 
+
+# 设置环境变量
 ENV NODE_ENV production
 ENV APP_PATH /app
 
@@ -24,9 +31,10 @@ ENV APP_PATH /app
 # 添加源
 RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
 
-# Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
+# 安装必要的兼容包
 RUN apk add --no-cache libc6-compat
 
+# 配置Yarn，移除全局的旧版本并启用corepack管理
 RUN npm uninstall yarn -g \
     && corepack enable \
     && corepack prepare yarn@3.6.1 --activate \
@@ -34,32 +42,67 @@ RUN npm uninstall yarn -g \
     && yarn config set -H   enableStrictSsl false \
     && yarn config set -H  npmRegistryServer https://registry.npm.taobao.org
 
+# 构建阶段，安装依赖并构建项目
 FROM base AS builder
 WORKDIR $APP_PATH
 COPY ./ ./
 RUN yarn install && yarn build
 
-
+# 运行阶段，创建用户并将构建文件拷贝到镜像中
 FROM base AS runner
 WORKDIR $APP_PATH
 
+# 创建nodejs组和nextjs用户
 RUN addgroup -g 1001 -S nodejs
 RUN adduser -S nextjs -u 1001
 
-# ADD  --chown=nextjs:nodejs ./.next/standalone ./
-# ADD   ./public  ./public
-# ADD  --chown=nextjs:nodejs ./.next/static ./.next/static
+# 复制构建输出到运行环境
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs $APP_PATH/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs $APP_PATH/.next/static ./.next/static
 
+# 设置用户为nextjs
 USER nextjs
 
+# 暴露端口3000
 EXPOSE 3000
 
+# 设置运行时环境变量
 ENV PORT 3000
 ENV HOSTNAME "0.0.0.0"
-# server.js is created by next build from the standalone output
-# https://nextjs.org/docs/pages/api-reference/next-config-js/output
+
+# 使用node启动Next.js服务
 CMD HOSTNAME="0.0.0.0" node server.js
 ```
+
+### Dockerfile解析
+
+#### Base阶段
+
+1. 基础镜像： 使用node:20.15.1-alpine作为基础镜像。
+2. 更换镜像源： 为了加快下载速度，将默认的alpinelinux源更改为阿里云的镜像。
+3. 安装依赖： 使用apk安装libc6-compat以确保兼容性。
+4. 配置Yarn： 项目使用yarn:2.\*构建，先移除旧版本yarn，通过corepack开启新版本yarn， 设置为使用淘宝镜像源以加快依赖的下载速度
+
+#### builder阶段
+
+1. 创建用户和组： 为了安全性，创建一个用户nextjs和组nodejs，并在后续阶段设置应用程序的运行用户。
+2. 复制构建文件： 将构建阶段生成的静态资源文件和项目的可执行文件拷贝到运行环境中。
+3. 启动应用： 使用node server.js启动应用，监听0.0.0.0:3000端口。
+
+### 构建和运行Docker镜像
+
+```bash
+# 构建Docker镜像
+docker build -t moonhou/ifcat:[version] .
+
+# 运行容器
+docker run -d --name ifcat -p 3000:3000 moonhou/ifcat:[version]
+```
+
+### 总结
+
+通过这种方式，我们可以轻松地将Next.js项目打包为Docker镜像，并部署到任何支持Docker的环境中。以上步骤不仅能够简化开发、测试和部署流程，还能确保项目在不同环境中运行的一致性。  
+当然，博客是部署在在自己的服务器上，所以本地开发到远程部署这中间会很麻烦。  
+一开始我是自己打包镜像然后上传到服务器手动重新部署，后边使用github action自动完成了这中间流程，具体细节后续会出一篇新的文章介绍。  
+不过在重新部署时会短暂停机，这个问题还没处理，不过网站没什么流量，这算是小问题了，哈哈哈哈哈哈😂。
