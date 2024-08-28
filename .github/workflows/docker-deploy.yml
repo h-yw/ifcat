@@ -94,6 +94,7 @@ jobs:
         env:
           SERVER_USER: ${{ secrets.SERVER_USER }}
           SERVER_IP: ${{ secrets.SERVER_IP }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           DEST_PATH: ${{ secrets.SERVER_PATH }}
           IMG_VERSION: ${{ needs.build.outputs.new_version }}
         run: |
