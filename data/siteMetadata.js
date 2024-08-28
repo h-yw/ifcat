@@ -3,7 +3,7 @@ const siteMetadata = {
   title: 'ifcat',
   author: 'Hou yw',
   // headerTitle: '孤岛',
-  description: '技术&摄影',
+  description: 'Hold Love & Zest',
   language: 'zh-cn',
   theme: 'system', // system, dark or light
   siteUrl: 'https://hlovez.life',
