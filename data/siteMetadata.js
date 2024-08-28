@@ -61,10 +61,14 @@ const siteMetadata = {
     giscusConfig: {
       // Visit the link below, and follow the steps in the 'configuration' section
       // https://giscus.app/
-      repo: process.env.NEXT_PUBLIC_GISCUS_REPO,
-      repositoryId: process.env.NEXT_PUBLIC_GISCUS_REPOSITORY_ID,
-      category: process.env.NEXT_PUBLIC_GISCUS_CATEGORY,
-      categoryId: process.env.NEXT_PUBLIC_GISCUS_CATEGORY_ID,
+      //       NEXT_PUBLIC_GISCUS_REPO= "h-yw/ifcat"
+      // NEXT_PUBLIC_GISCUS_REPOSITORY_ID= "R_kgDOMbs4SA"
+      // NEXT_PUBLIC_GISCUS_CATEGORY= "Announcements"
+      // NEXT_PUBLIC_GISCUS_CATEGORY_ID= "DIC_kwDOMbs4SM4Ch9OZ"
+      repo: 'h-yw/ifcat',
+      repositoryId: 'R_kgDOMbs4SA',
+      category: 'Announcements',
+      categoryId: 'DIC_kwDOMbs4SM4Ch9OZ',
       mapping: 'pathname', // supported options: pathname, url, title
       reactions: '1', // Emoji reactions: 1 = enable / 0 = disable
       // Send discussion metadata periodically to the parent window: 1 = enable / 0 = disable
