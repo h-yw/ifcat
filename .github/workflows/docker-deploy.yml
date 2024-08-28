@@ -106,6 +106,7 @@ jobs:
           docker load -i ./ifcat-v$IMG_VERSION.tar
           echo "img load successfully"
           CONTAINER_ID=$(docker ps -a -q -f name=ifcat)
+          echo "CONTAINER_ID= $CONTAINER_ID"
           docker stop $CONTAINER_ID
           echo "old server stoped"
           docker rm $CONTAINER_ID
