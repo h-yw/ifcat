@@ -105,12 +105,14 @@ jobs:
           echo "login server successfully"
           docker load -i ./ifcat-v$IMG_VERSION.tar
           echo "img load successfully"
-          # docker stop ifcat
-          # echo "old server stoped"
-          # docker rm ifcat
-          docker rm -f ifcat
+          CONTAINER_ID=$(docker ps -a -q -f name=ifcat)
+          docker stop $CONTAINER_ID
+          echo "old server stoped"
+          docker rm $CONTAINER_ID
+          # docker rm -f ifcat
           echo "rm old container"
-          docker image rm moonhou/ifcat:$OLD_VERSION
+          IMAGE_ID=$(docker images -q moonhou/ifcat:$IMG_VERSION)
+          docker image rm $IMAGE_ID #moonhou/ifcat:$OLD_VERSION
           echo "rm old img successfully"
           docker run -d --name ifcat -p 3000:3000 moonhou/ifcat:$IMG_VERSION
           echo "deploy new img successfully"
