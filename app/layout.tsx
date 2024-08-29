@@ -11,6 +11,8 @@ import Footer from '@/components/Footer'
 import siteMetadata from '@/data/siteMetadata'
 import { ThemeProviders } from './theme-providers'
 import { Metadata } from 'next'
+import Script from 'next/script'
+import BaiduAnalytics from '@/components/BaiduAnalytics'
 
 const space_grotesk = Space_Grotesk({
   subsets: ['latin'],
@@ -69,7 +71,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const basePath = process.env.BASE_PATH || ''
-
+  const isProduction = process.env.NODE_ENV === 'production'
   return (
     <html
       lang={siteMetadata.language}
@@ -108,6 +110,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="bg-white pl-[calc(100vw-100%)] text-black antialiased dark:bg-gray-950 dark:text-white">
         <ThemeProviders>
           <Analytics analyticsConfig={siteMetadata.analytics as AnalyticsConfig} />
+          {isProduction && <BaiduAnalytics />}
           <SectionContainer>
             <div className="flex h-screen flex-col justify-between font-sans">
               <SearchProvider searchConfig={siteMetadata.search as SearchConfig}>
