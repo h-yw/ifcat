@@ -1,12 +1,10 @@
-import projectsData from '@/data/projectsData'
-import Card from '@/components/Card'
 import { genPageMetadata } from 'app/seo'
 import photosData from '@/data/photosData'
 import ImageCard from '@/components/ImageCard'
 
 export const metadata = genPageMetadata({ title: 'Photography' })
 
-export default function Projects() {
+export default function Photography() {
   return (
     <>
       <div className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -19,7 +17,7 @@ export default function Projects() {
           </p> */}
         </div>
         <div className="container py-12">
-          <div className="columns-1 gap-4  gap-y-4 sm:columns-2">
+          <div className="columns-1 gap-4 sm:columns-2">
             {photosData.map((d) => (
               <ImageCard key={d.title} photo={d} />
             ))}

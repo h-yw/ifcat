@@ -1,7 +1,7 @@
 import Image from './Image'
 import Link from './Link'
 
-const Card = ({ title, description, imgSrc, href }) => (
+const Card = ({ title, description, imgSrc, href, tag }) => (
   <div className="md max-w-[544px] p-4 md:w-1/2">
     <div
       className={`${
@@ -11,22 +11,36 @@ const Card = ({ title, description, imgSrc, href }) => (
       {imgSrc &&
         (href ? (
           <Link href={href} aria-label={`Link to ${title}`}>
+            <div className="block-inline relative">
+              <Image
+                alt={title}
+                src={imgSrc}
+                className="object-contain md:h-36 lg:h-48"
+                width={544}
+                height={306}
+              />
+              {tag ? (
+                <div className="absolute bottom-4 right-2 rounded bg-black bg-opacity-50 px-2 py-1 text-xs text-white">
+                  {tag}
+                </div>
+              ) : null}
+            </div>
+          </Link>
+        ) : (
+          <div className="block-inline relative">
             <Image
               alt={title}
               src={imgSrc}
-              className="object-cover object-center md:h-36 lg:h-48"
+              className="object-contain md:h-36 lg:h-48"
               width={544}
               height={306}
             />
-          </Link>
-        ) : (
-          <Image
-            alt={title}
-            src={imgSrc}
-            className="object-cover object-center md:h-36 lg:h-48"
-            width={544}
-            height={306}
-          />
+            {tag ? (
+              <div className="absolute bottom-4 right-2 rounded bg-black bg-opacity-50 px-2 py-1 text-xs text-white">
+                {tag}
+              </div>
+            ) : null}
+          </div>
         ))}
       <div className="p-6">
         <h2 className="mb-3 text-2xl font-bold leading-8 tracking-tight">

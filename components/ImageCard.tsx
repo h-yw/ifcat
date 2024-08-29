@@ -1,5 +1,6 @@
 import { Photo } from '@/data/photosData'
 import Image from './Image'
+import Modal from './Modal'
 
 const ImageCard = (props: { photo: Photo }) => {
   const {
@@ -10,31 +11,36 @@ const ImageCard = (props: { photo: Photo }) => {
     imageWidth,
     imageHeight,
     iso,
-    shutterSpeedValue,
     exposureTime,
     fNumber,
     model,
     lensInfo,
     lensMake,
+    imageSize,
   } = props.photo
   const maker = model.replace(lensMake, '')
   console.log(filePath)
   return (
     // className="md max-w-[544px] p-4"
-    <div className="w-full">
+    <div className=" w-full">
       <div
         className={`${
           filePath && 'h-full'
         }  overflow-hidden rounded-md border-2 border-gray-200 border-opacity-60 dark:border-gray-700`}
       >
-        <Image
-          alt={title}
-          src={filePath}
-          //   className="object-cover object-center md:h-36 lg:h-48"
-          className="mb-2 object-cover object-center"
-          width={imageWidth}
-          height={imageHeight}
-        />
+        <div className="relative inline-block">
+          <Image
+            alt={title}
+            src={filePath}
+            //   className="object-cover object-center md:h-36 lg:h-48"
+            className="mb-2 object-cover object-center"
+            width={imageWidth}
+            height={imageHeight}
+          />
+          <div className="absolute bottom-4 right-2 rounded bg-black bg-opacity-50 px-2 py-1 text-xs text-white">
+            {imageSize}
+          </div>
+        </div>
         <div className="pb-2 pl-2 pr-2">
           {/* <h3 className="mb-3 text-2xl font-bold leading-8 tracking-tight">{title}</h3> */}
           {/* <p className="prose mb-3 max-w-none text-gray-500 dark:text-gray-400">{description}</p> */}
