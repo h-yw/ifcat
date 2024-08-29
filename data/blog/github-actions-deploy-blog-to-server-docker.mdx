@@ -1,0 +1,315 @@
+---
+title: 使用 GitHub Actions 自动构建和部署 Docker 镜像
+date: 2024-08-29
+tags: [笔记, 教程]
+draft: false
+summary: 这个博客是使用docker部署的，在(Docker部署nextjs项目)[./Docker部署nextjs项目]中有提到。为了提高效率，使用Github Actions来自动化部署。GitHub Actions 是一种强大的工具，它允许我们创建自定义的 CI/CD 工作流，以便自动化地构建、测试和部署代码。在这篇博客中，我们将介绍如何使用 GitHub Actions 自动构建 Docker 镜像并将其部署到远程服务器。
+---
+
+## 前言
+
+&emsp;&emsp;这个博客是使用docker部署的，在[Docker部署nextjs项目](docker-deploys-nextjs-project)中有提到。为了提高效率，使用Github Actions来自动化部署。GitHub Actions 是一种强大的工具，它允许我们创建自定义的 CI/CD 工作流，以便自动化地构建、测试和部署代码。在这篇博客中，我们将介绍如何使用 GitHub Actions 自动构建 Docker 镜像并将其部署到远程服务器。
+
+<TOCInline toc={props.toc} exclude="Overview" toHeading={3} />
+
+## 工作流配置
+
+以下是 GitHub Actions 工作流的配置文件：
+
+```yaml:部署配置
+name: Build Docker Image
+
+on:
+  push:
+    branches: main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    outputs:
+      new_version: ${{ steps.increment_version.outputs.new_version }}
+      old_version: ${{ steps.get_version.outputs.old_version}}
+
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Read current version
+        id: get_version
+        run: |
+          VERSION=$(cat .version)
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+          echo "::set-output name=old_version::$VERSION"
+
+
+      - name: Increment version
+        id: increment_version
+        run: |
+          VERSION=$(cat .version)
+          IFS='.' read -r major minor patch <<< "$VERSION"
+          patch=$((patch + 1))
+          NEW_VERSION="$major.$minor.$patch"
+          echo "$NEW_VERSION" > .version
+          echo "::set-output name=new_version::$NEW_VERSION"
+          echo "NEW_VERSION=${NEW_VERSION}" >> $GITHUB_ENV
+
+
+      - name: Build Docker image
+        run: |
+          docker build -t moonhou/ifcat:${{ env.NEW_VERSION }} .
+
+      - name: Save Docker image to tar file
+        run: |
+          docker save moonhou/ifcat:${{ env.NEW_VERSION }} -o ifcat-v${{ env.NEW_VERSION }}.tar
+
+      - name: Commit and push version update
+        uses: EndBug/add-and-commit@v9
+        with:
+          add: '.version'
+          message: 'Bump version to ${{ env.NEW_VERSION }}'
+          author_name: 'github-actions'
+          author_email: 'github-actions@github.com'
+
+      - name: Upload Docker image tar file as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: docker-image
+          path: ifcat-v${{ env.NEW_VERSION }}.tar
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Docker image tar file
+        uses: actions/download-artifact@v3
+        with:
+          name: docker-image
+      - name: Debug NEW_VERSION in deploy job
+        run: echo "Deploying version ${{ needs.build.outputs.new_version }}"
+
+      - name: Install sshpass
+        run: sudo apt-get install -y openssh-client sshpass
+      # sshpass -p $SSH_PRIVATE_KEY
+      - name: Add SSH host key
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
+
+      - name: SCP Docker image tar file to server
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_IP: ${{ secrets.SERVER_IP }}
+          DEST_PATH: ${{ secrets.SERVER_PATH }}
+        run: |
+          sshpass -p $SSH_PRIVATE_KEY scp -o StrictHostKeyChecking=no ifcat-v${{ needs.build.outputs.new_version }}.tar $SERVER_USER@$SERVER_IP:$DEST_PATH/ifcat-v${{ needs.build.outputs.new_version }}.tar
+
+      - name: SSH into server and execute commands
+        env:
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_IP: ${{ secrets.SERVER_IP }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          DEST_PATH: ${{ secrets.SERVER_PATH }}
+          IMG_VERSION: ${{ needs.build.outputs.new_version }}
+          OLD_VERSION: ${{ needs.build.outputs.old_version }}
+        run: |
+          sshpass -p $SSH_PRIVATE_KEY ssh $SERVER_USER@$SERVER_IP << EOF
+              echo "login server successfully"
+              docker load -i ./ifcat-v$IMG_VERSION.tar
+              echo "img load successfully"
+              docker stop ifcat
+              echo "old server stoped"
+              docker rm ifcat
+              echo "rm old container"
+              docker image rm moonhou/ifcat:$OLD_VERSION
+              echo "rm old img successfully"
+              docker run -d --name ifcat -p 3000:3000 moonhou/ifcat:$IMG_VERSION
+              echo "deploy new img successfully"
+              rm ifcat-v$IMG_VERSION.tar
+          EOF
+```
+
+## 工作流解释
+
+### 构建阶段
+
+0. **触发条件**: 当代码被推送到 main 分支时，触发工作流。也可以通过手动触发工作流来部署。
+
+```yaml
+on:
+  push:
+    branches: main
+```
+
+1. **输出**: 定义两个输出，作为版本号，用于在部署阶段使用。
+
+```yaml
+outputs:
+  new_version: ${{ steps.increment_version.outputs.new_version }}
+  old_version: ${{ steps.get_version.outputs.old_version}}
+```
+
+2. **Checkout 代码**: 使用 actions/checkout 操作将最新的代码检出到工作目录。
+
+```yaml
+- name: Check out the code
+  uses: actions/checkout@v4
+```
+
+2. **设置 Docker Buildx**: 使用 docker/setup-buildx-action 来配置 Docker Buildx，支持多平台构建。
+
+```yaml
+- name: Set up Docker Buildx
+  uses: docker/setup-buildx-action@v3
+```
+
+3. **读取当前版本**: 项目根目录有.version文件，用于记录当前版本号。从 .version 文件中读取当前版本号，并将其设置为环境变量，用于计算最新版本号。
+
+```yaml
+- name: Read current version
+  id: get_version
+  run: |
+    VERSION=$(cat .version)
+    echo "VERSION=${VERSION}" >> $GITHUB_ENV
+    echo "::set-output name=old_version::$VERSION"
+```
+
+4. **增加版本号**: 将版本号的 patch 部分增加 1，并更新 .version 文件，以便进行版本控制。github推荐使用环境变量，对set-output后续可能不再支持。
+
+```yaml
+- name: Increment version
+  id: increment_version
+  run: |
+    VERSION=$(cat .version)
+    IFS='.' read -r major minor patch <<< "$VERSION"
+    patch=$((patch + 1))
+    NEW_VERSION="$major.$minor.$patch"
+    echo "$NEW_VERSION" > .version
+    echo "::set-output name=new_version::$NEW_VERSION"
+    echo "NEW_VERSION=${NEW_VERSION}" >> $GITHUB_ENV
+```
+
+> [!TIP]
+> github推荐使用环境变量，对set-output的形式后续可能不再支持。
+
+5. **构建 Docker 镜像**: 使用 docker build 命令构建新的 Docker 镜像，并为其打上新的版本标签。
+
+```yaml
+- name: Build Docker image
+  run: |
+    docker build -t moonhou/ifcat:${{ env.NEW_VERSION }} .
+```
+
+6. **保存 Docker 镜像**: 将构建好的 Docker 镜像保存为 .tar 文件，以便后续上传服务器和部署。
+
+```yaml
+- name: Save Docker image to tar file
+  run: |
+    docker save moonhou/ifcat:${{ env.NEW_VERSION }} -o ifcat-v${{ env.NEW_VERSION }}.tar
+```
+
+7. **提交和推送版本更新**: 将更新后的 .version 文件提交到 GitHub 仓库，确保版本号的变化被记录。
+
+```yaml
+- name: Commit and push version update
+  uses: EndBug/add-and-commit@v9
+  with:
+    add: '.version'
+    message: 'Bump version to ${{ env.NEW_VERSION }}'
+    author_name: 'github-actions'
+    author_email: 'github-actions@github.com'
+```
+
+8. **上传 Docker 镜像文件**: 使用 actions/upload-artifact 上传 .tar 文件，供后续的deploy步骤使用。
+
+```yaml
+- name: Upload Docker image tar file
+  uses: actions/upload-artifact@v4
+  with:
+    name: docker-image
+    path: ifcat-v${{ env.NEW_VERSION }}.tar
+```
+
+### 部署阶段
+
+1. **下载 Docker 镜像文件**: 从 GitHub Actions 工件中下载 Docker 镜像 .tar 文件。
+
+```yaml
+steps:
+  - name: Download Docker image tar file
+    uses: actions/download-artifact@v3
+    with:
+      name: docker-image
+```
+
+2. 安装 sshpass: 安装 sshpass 工具，以便通过 SSH 进行自动化的文件传输。
+
+由于服务器使用密码登录，在使用scp时要输入密码，需要使用sshpass将密码传到scp。
+
+```yaml
+- name: Install sshpass
+  run: sudo apt-get install -y openssh-client sshpass
+```
+
+3. **添加IP**: 将服务器的地址添加到 known_hosts 文件中，以避免 SSH 连接时的安全警告。
+
+```yaml
+- name: Add SSH host key
+  run: |
+    mkdir -p ~/.ssh
+    ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
+```
+
+4. **SCP Docker 镜像文件到服务器**: 使用 sshpass 将 .tar 文件上传到远程服务器的指定路径。
+
+```yaml
+- name: SCP Docker image tar file to server
+  env:
+    SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+    SERVER_PRIVATE_KEY: ${{ secrets.SERVER_PRIVATE_KEY }}
+    SERVER_USER: ${{ secrets.SERVER_USER }}
+    SERVER_IP: ${{ secrets.SERVER_IP }}
+    DEST_PATH: ${{ secrets.SERVER_PATH }}
+  run: |
+    sshpass -p $SSH_PRIVATE_KEY scp -o StrictHostKeyChecking=no ./ifcat-v${{ env.NEW_VERSION }}.tar $SERVER_USER@$SERVER_IP:$DEST_PATH
+```
+
+> [!TIP]
+> 服务器相关信息保存在了secrets中，通过secrets.SERVER_IP等获取。具体在仓库`setting/Security/Secret and variables/Actions`中配置。
+
+5. **SSH 登录服务器并执行命令**: 登录到远程服务器，加载 Docker 镜像，停止并删除旧的容器和镜像，然后运行新的容器，并删除上传的 .tar 文件。
+
+```yaml
+- name: SSH into server and execute commands
+  env:
+    SERVER_USER: ${{ secrets.SERVER_USER }}
+    SERVER_IP: ${{ secrets.SERVER_IP }}
+    SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+    DEST_PATH: ${{ secrets.SERVER_PATH }}
+    IMG_VERSION: ${{ needs.build.outputs.new_version }}
+    OLD_VERSION: ${{ needs.build.outputs.old_version }}
+  run: |
+    sshpass -p $SSH_PRIVATE_KEY ssh $SERVER_USER@$SERVER_IP << EOF
+        echo "login server successfully"
+        docker load -i ./ifcat-v$IMG_VERSION.tar
+        echo "img load successfully"
+        docker stop ifcat
+        echo "old server stoped"
+        docker rm ifcat
+        echo "rm old container"
+        docker image rm moonhou/ifcat:$OLD_VERSION
+        echo "rm old img successfully"
+        docker run -d --name ifcat -p 3000:3000 moonhou/ifcat:$IMG_VERSION
+        echo "deploy new img successfully"
+        rm ifcat-v$IMG_VERSION.tar
+    EOF
+```
+
+## 总结
+
+&emsp;&emsp;通过 GitHub Actions 的持续集成和部署功能，可以自动构建、测试和部署 Docker 镜像，并在服务器上运行。这样的自动化工作流不仅可以提升开发效率，还能确保每次更新都能够可靠地发布到生产环境。可以根据自己的需求参考这些步骤进行配置。

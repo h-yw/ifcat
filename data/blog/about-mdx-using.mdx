@@ -1,0 +1,35 @@
+---
+title: MDX的一些使用
+date: 2024-08-28
+tags: [MDX, 教程, 笔记]
+draft: true
+summary: 博客原文使用MDX进行编辑，所以需要了解MDX的一些使用方法，写文章记录一下。
+---
+
+## MDX的一些使用
+
+### 执行javascript
+
+export const currentDate = new Date()
+
+```mdx:原文
+export const currentDate = new Date();
+
+`执行结果`:  {currentDate.toLocaleString()}
+```
+
+`执行结果`：{currentDate.toLocaleString()}
+
+### 使用组件
+
+export function Hello({ name }) {
+  return <span>Hello {name}</span>
+}
+
+```mdx:原文
+import { Hello } from "./hello";
+
+`执行结果`:  <Hello name="路飞"/>
+```
+
+`执行结果`：<Hello name="路飞"/>
