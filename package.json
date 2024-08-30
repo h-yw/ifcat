@@ -11,7 +11,8 @@
     "analyze": "cross-env ANALYZE=true next build",
     "lint": "next lint --fix --dir pages --dir app --dir components --dir lib --dir layouts --dir scripts",
     "prepare": "husky",
-    "exif": "node ./scripts/imageExif.mjs"
+    "exif": "node ./scripts/imageExif.mjs",
+    "index": "node ./scripts/indexNow.mjs"
   },
   "dependencies": {
     "@headlessui/react": "1.7.19",
