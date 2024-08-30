@@ -49,7 +49,6 @@ function getExif(file) {
     return exiftool
       .readRaw(file.path)
       .then((exif) => {
-        console.log('exif', exif)
         resolve({
           title: exif.FileName,
           description: '',

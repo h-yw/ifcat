@@ -17,11 +17,11 @@ const ImageCard = (props: { photo: Photo }) => {
     lensMake,
     imageSize,
   } = props.photo
-  const maker = model.replace(lensMake, '')
+  const maker = model?.replace(lensMake, '')
   console.log(filePath)
   return (
     // className="md max-w-[544px] p-4"
-    <div className=" w-full">
+    <div className="z-100 w-full ">
       <div
         className={`${
           filePath && 'h-full'
@@ -30,9 +30,10 @@ const ImageCard = (props: { photo: Photo }) => {
         <div className="relative inline-block">
           <Image
             alt={title}
+            title={description}
             src={filePath}
             //   className="object-cover object-center md:h-36 lg:h-48"
-            className="mb-2 object-cover object-center"
+            className="mb-2 transform cursor-pointer object-contain transition-transform duration-300 ease-in-out hover:scale-105"
             width={imageWidth}
             height={imageHeight}
           />

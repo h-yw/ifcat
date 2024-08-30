@@ -17,7 +17,7 @@ export default function Photography() {
           </p> */}
         </div>
         <div className="container py-12">
-          <div className="columns-1 gap-4 sm:columns-2">
+          <div className="columns-1 gap-4 sm:columns-2 ">
             {photosData.map((d) => (
               <ImageCard key={d.title} photo={d} />
             ))}
