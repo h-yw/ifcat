@@ -2,7 +2,6 @@ import path from 'path'
 import fs from 'fs'
 import { exiftool } from 'exiftool-vendored'
 import { encode } from 'blurhash'
-import { createCanvas, loadImage } from 'canvas'
 import cliProgress from 'cli-progress'
 import sharp from 'sharp'
 const baseDir = path.resolve('./')
@@ -72,16 +71,6 @@ function updatePhotosData(photosData) {
     '//@start-data \n' + JSON.stringify(photosData) + '\n //@end-data'
   )
   fs.writeFileSync(photosDataPath, replaceData, 'utf-8')
-}
-
-const getImageData = (image) => {
-  const ratio = image.width > 200 ? 200 / image.width : 1
-  const canvas = createCanvas(image.width * ratio, image.height * ratio)
-  canvas.width = image.width * ratio
-  canvas.height = image.height * ratio
-  const context = canvas.getContext('2d')
-  context.drawImage(image, 0, 0, canvas.width, canvas.height)
-  return context.getImageData(0, 0, image.width, image.height)
 }
 
 async function encodeImageToBlurhash(imageUrl) {
