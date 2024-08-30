@@ -25,6 +25,7 @@ export interface Photo {
   imageWidth: number
   imageHeight: number
   imageSize: string
+  blur: string
 }
 const staticPhotosData: Photo[] = []
 
@@ -32,6 +33,7 @@ const photosData: Photo[] =
   //@start-data
   [
     {
+      blur: 'UO7;GLZ}R3VqPEi^nMjEEoo#t7ozmjbcbwbI',
       title: '20210921-DSC_1021.jpg',
       description: '',
       filePath: '/static/photos/2021-09-21/20210921-DSC_1021.jpg',
@@ -60,6 +62,7 @@ const photosData: Photo[] =
       imageSize: '6016x4016',
     },
     {
+      blur: 'UV9TWPjFR*W=lCfRbIfk9%bHoLjZRPf6jZj[',
       title: '20210921-DSC_1026.jpg',
       description: '',
       filePath: '/static/photos/2021-09-21/20210921-DSC_1026.jpg',
@@ -88,6 +91,7 @@ const photosData: Photo[] =
       imageSize: '5665x3782',
     },
     {
+      blur: 'U87cjSbH5lWqEgWVs.oL0}sU=xjs}YoeJ7WW',
       title: '20210928-DSC_1320.jpg',
       description: '',
       filePath: '/static/photos/2021-09-28/20210928-DSC_1320.jpg',
@@ -116,6 +120,7 @@ const photosData: Photo[] =
       imageSize: '5730x3264',
     },
     {
+      blur: 'U56Zd|Ez1I=eR*j[s:WV1H$j}EACbvjZR*of',
       title: '20210928-DSC_1363.jpg',
       description: '',
       filePath: '/static/photos/2021-09-28/20210928-DSC_1363.jpg',
@@ -144,6 +149,7 @@ const photosData: Photo[] =
       imageSize: '6016x4016',
     },
     {
+      blur: 'UtC8j-x]WAkCysofayfkIBRPkCayR5flj[fQ',
       title: '20211016-DSC_1653.jpg',
       description: '',
       filePath: '/static/photos/2021-10-16/20211016-DSC_1653.jpg',
@@ -172,6 +178,7 @@ const photosData: Photo[] =
       imageSize: '6016x4016',
     },
     {
+      blur: 'UMH,@y3W-p}[D%M{x]%M={pIR*VsELiwR*X8',
       title: 'DSC_0720-1.jpg',
       description: '',
       filePath: '/static/photos/DSC_0720-1.jpg',
@@ -200,6 +207,7 @@ const photosData: Photo[] =
       imageSize: '4016x6016',
     },
     {
+      blur: 'UD851LWG0eoJe.jGoeaM0xo|}[Vto{aLf,bu',
       title: 'DSC_0892-1.jpg',
       description: '',
       filePath: '/static/photos/DSC_0892-1.jpg',
@@ -228,6 +236,7 @@ const photosData: Photo[] =
       imageSize: '6016x4016',
     },
     {
+      blur: 'UFC%dERjRlM{~oWBozM{e-oeoJRkogaxayay',
       title: 'DSC_0899-1.jpg',
       description: '',
       filePath: '/static/photos/DSC_0899-1.jpg',
