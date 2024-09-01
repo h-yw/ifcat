@@ -12,6 +12,7 @@ export async function generateMetadata({ params }: { params: { tag: string } }):
   return genPageMetadata({
     title: tag,
     description: `${siteMetadata.title} ${tag} tagged content`,
+    category: `${tag} - Tags`,
     alternates: {
       canonical: './',
       types: {

@@ -2,7 +2,13 @@ import projectsData from '@/data/projectsData'
 import Card from '@/components/Card'
 import { genPageMetadata } from 'app/seo'
 
-export const metadata = genPageMetadata({ title: 'Projects' })
+export const metadata = genPageMetadata({
+  title: 'Projects',
+  keywords: ['ifcat', '开源项目', '个人作品', 'houyw的开源项目'],
+  description:
+    'ifcat的开源项目列表，会把个人的作品的简单介绍放在这里，方便快速浏览，还可以让各位star一下，哈哈哈哈哈哈😄。',
+  category: '项目列表-Projects',
+})
 
 export default function Projects() {
   return (

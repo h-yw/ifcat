@@ -24,16 +24,16 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteMetadata.siteUrl),
   title: {
     default: siteMetadata.title,
-    template: `%s | ${siteMetadata.title}`,
+    template: `%s - ${siteMetadata.title}`,
   },
   applicationName: siteMetadata.title,
   description: siteMetadata.description,
   keywords: siteMetadata.seo.keywords,
   authors: siteMetadata.seo.authors,
   icons: {
-    icon: './static/favicons/favicon.ico',
-    shortcut: './static/favicons/favicon-16x16.png',
-    apple: './static/favicons/apple-touch-icon.png',
+    icon: '/static/favicons/favicon.ico',
+    shortcut: '/static/favicons/favicon-16x16.png',
+    apple: '/static/favicons/apple-touch-icon.png',
   },
   generator: 'Next.js',
   openGraph: {

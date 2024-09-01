@@ -2,7 +2,13 @@ import { genPageMetadata } from 'app/seo'
 import photosData from '@/data/photosData'
 import ImageCard from '@/components/ImageCard'
 
-export const metadata = genPageMetadata({ title: 'Photography' })
+export const metadata = genPageMetadata({
+  title: 'Photography',
+  keywords: ['ifcat 摄影', '摄影作品', 'photography', '意识流摄影', 'Nikon', 'SONY'],
+  description:
+    'ifcat 摄影作品：分享自己的摄影作品，包括详细的拍摄信息如摄影工具、镜头焦距、快门速度、ISO 设置和照片分辨率等。欢迎浏览博主的摄影作品，和博主交流摄影。',
+  category: '摄影-Photography',
+})
 
 export default function Photography() {
   return (

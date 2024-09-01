@@ -23,19 +23,7 @@ const siteMetadata = {
   discussOnTwitter: false,
   locale: 'zh-CN',
   seo: {
-    keywords: [
-      'ifcat',
-      'houyw',
-      'Hou yw',
-      'houyw的博客',
-      'houyw的摄影',
-      '博客',
-      'blog',
-      '意识流摄影',
-      '如果是只猫',
-      'React',
-      'Next.js',
-    ],
+    keywords: ['ifcat', 'React', 'Next.js', '技术', '博客', '摄影', '意识流摄影', '如果是只猫'],
     authors: [
       {
         name: 'houyw',

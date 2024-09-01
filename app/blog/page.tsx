@@ -5,7 +5,13 @@ import { genPageMetadata } from 'app/seo'
 
 const POSTS_PER_PAGE = 5
 
-export const metadata = genPageMetadata({ title: 'Blog' })
+export const metadata = genPageMetadata({
+  title: 'Blog',
+  keywords: ['ifcat', '技术文档', '全部文章', '文章分类'],
+  description:
+    'ifcat 博客的分类页面：整理博客的文章，展示tags，方便诸位找到想了解的内容。欢迎浏览blog，与博主进行交流。',
+  category: '文章列表-Blog',
+})
 
 export default function BlogPage() {
   const posts = allCoreContent(sortPosts(allBlogs))

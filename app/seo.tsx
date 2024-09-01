@@ -1,7 +1,7 @@
 import { Metadata } from 'next'
 import siteMetadata from '@/data/siteMetadata'
 
-interface PageSEOProps {
+interface PageSEOProps extends Metadata {
   title: string
   description?: string
   image?: string
@@ -9,10 +9,17 @@ interface PageSEOProps {
   [key: string]: any
 }
 
-export function genPageMetadata({ title, description, image, ...rest }: PageSEOProps): Metadata {
+export function genPageMetadata({
+  title,
+  description,
+  image,
+  keywords,
+  ...rest
+}: PageSEOProps): Metadata {
   return {
     title,
     description: description || siteMetadata.description,
+    keywords: keywords || siteMetadata.seo.keywords,
     openGraph: {
       title: `${title} | ${siteMetadata.title}`,
       description: description || siteMetadata.description,
