@@ -64,6 +64,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     title: siteMetadata.title,
+    site: '@Luckydog_H',
     card: 'summary_large_image',
     images: [siteMetadata.socialBanner],
   },

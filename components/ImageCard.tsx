@@ -1,6 +1,6 @@
 import { Photo } from '@/data/photosData'
 import Image from './Image'
-import Modal from './Modal'
+import { decode } from 'blurhash'
 
 const ImageCard = (props: { photo: Photo }) => {
   const {
@@ -17,12 +17,14 @@ const ImageCard = (props: { photo: Photo }) => {
     lensInfo,
     lensMake,
     imageSize,
+    blur,
   } = props.photo
-  const maker = model.replace(lensMake, '')
+
+  const maker = model?.replace(lensMake, '')
   console.log(filePath)
   return (
     // className="md max-w-[544px] p-4"
-    <div className=" w-full">
+    <div className="z-100 w-full ">
       <div
         className={`${
           filePath && 'h-full'
@@ -31,11 +33,13 @@ const ImageCard = (props: { photo: Photo }) => {
         <div className="relative inline-block">
           <Image
             alt={title}
+            title={description}
             src={filePath}
             //   className="object-cover object-center md:h-36 lg:h-48"
-            className="mb-2 object-cover object-center"
+            className="mb-2 transform cursor-pointer object-contain transition-transform duration-300 ease-in-out hover:scale-105"
             width={imageWidth}
             height={imageHeight}
+            quality={50}
           />
           <div className="absolute bottom-4 right-2 rounded bg-black bg-opacity-50 px-2 py-1 text-xs text-white">
             {imageSize}

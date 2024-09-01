@@ -1,14 +1,18 @@
 {
-  "name": "",
-  "short_name": "",
+  "name": "ifcat博客",
+  "short_name": "ifcat",
+  "description": "houyw的博客",
+  "id": "/",
   "icons": [
     {
-      "src": "/android-chrome-96x96.png",
-      "sizes": "96x96",
+      "src": "/static/favicons/android-chrome-96x96.png",
+      "sizes": "768x768",
       "type": "image/png"
     }
   ],
   "theme_color": "#000000",
   "background_color": "#000000",
-  "display": "standalone"
+  "display": "standalone",
+  "start_url": "/",
+  "form_factor": "wide"
 }
