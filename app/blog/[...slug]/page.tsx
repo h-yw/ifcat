@@ -36,9 +36,10 @@ export async function generateMetadata({
   if (!post) {
     return
   }
-
-  const publishedAt = new Date(post.date).toISOString()
+  const date = new Date(post.date)
+  const publishedAt = date.toISOString()
   const modifiedAt = new Date(post.lastmod || post.date).toISOString()
+  const formatedDate = `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`
   const authors = authorDetails.map((author) => author.name)
   let imageList = [siteMetadata.socialBanner]
   if (post.images) {
@@ -49,7 +50,6 @@ export async function generateMetadata({
       url: img.includes('http') ? img : siteMetadata.siteUrl + img,
     }
   })
-
   return {
     title: post.title,
     description: post.summary,
@@ -64,14 +64,20 @@ export async function generateMetadata({
       publishedTime: publishedAt,
       modifiedTime: modifiedAt,
       url: './',
-      images: ogImages,
+      images: [
+        {
+          url: `https://api.hlovez.life/v1/image.png?jsonStr={"title":"${post.title}","date":"${formatedDate}","size":{"width":800,"height":320}}`,
+        },
+      ],
       authors: authors.length > 0 ? authors : [siteMetadata.author],
     },
     twitter: {
       card: 'summary_large_image',
       title: post.title,
       description: post.summary,
-      images: imageList,
+      images: [
+        `https://api.hlovez.life/v1/image.png?jsonStr={"title":"${post.title}","date":"${formatedDate}","size":{"width":800,"height":320}}`,
+      ], //imageList,
     },
   }
 }

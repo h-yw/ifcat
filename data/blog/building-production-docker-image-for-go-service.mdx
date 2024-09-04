@@ -1,0 +1,114 @@
+---
+title: 如何将Golang服务构建为Docker镜像
+date: 2024-09-04
+tags: [Docker, Golang]
+keywords:
+  [ifcat, Docker化 Go 服务, 构建 Go Docker 镜像, Go 多阶段 Dockerfile, 轻量级 Go Docker 镜像]
+draft: false
+summary: 这篇文章将会说明我是如何使用多阶段 Dockerfile 构建适用于生产环境的 Go 服务 Docker 镜像。本文涵盖了创建精简、高效 Docker 镜像的详细步骤，用于部署 Go 应用程序。
+---
+
+## 前言
+
+&emsp;&emsp;这篇文章将会说明我是如何使用多阶段 Dockerfile 构建适用于生产环境的 Go 服务 Docker 镜像。本文涵盖了创建精简、高效 Docker 镜像的详细步骤，用于部署 Go 应用程序。
+
+<TOCInline toc={props.toc} exclude="Overview" toHeading={3} />
+
+## 代码实例
+
+```Dockerfile:Dockerfile
+# 第一步：安装依赖并编译
+FROM golang:latest as builder
+
+LABEL Author="houyw<1327603193@qq.com>" Version="1.0" Description="build image for hserver"
+
+# 启用 Go modules 并设置 Go proxy
+ENV GO111MODULE=on \
+    GOPROXY=https://goproxy.cn,direct
+
+WORKDIR /go/cache
+ADD go.mod .
+ADD go.sum .
+RUN go mod download
+
+WORKDIR /go/release
+ADD . .
+RUN GOOS=linux CGO_ENABLED=0 go build -ldflags="-w -s" -o hserver ./main.go
+
+# 第三步：构建最终生产镜像
+FROM scratch as prod
+COPY --from=builder /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+COPY --from=builder /go/release/hserver /
+COPY --from=builder /go/release/templates /templates
+COPY --from=builder /go/release/assets /assets
+COPY --from=builder /go/release/config.json /config.json
+COPY --from=builder /go/release/log/gin.log /log/gin.log
+
+ENV GIN_MODE=release \
+    PORT=8080
+
+EXPOSE 8080
+CMD ["/hserver"]
+```
+
+## Dockerfile详解
+
+- 第一步：构建器阶段\
+  该阶段使用官方的 `golang:latest` 镜像来编译 Go 应用程序。通过设置 `GO111MODULE` 和 `GOPROXY`，确保所有依赖项都能可靠下载。随后，使用优化参数编译应用程序，生成最小化的二进制文件。
+
+```Dockerfile
+FROM golang:latest as builder
+LABEL Author="houyw<1327603193@qq.com>" Version="1.0" Description="build image for hserver"
+ENV GO111MODULE=on \
+    GOPROXY=https://goproxy.cn,direct
+WORKDIR /go/cache
+ADD go.mod .
+ADD go.sum .
+RUN go mod download
+
+WORKDIR /go/release
+ADD . .
+RUN GOOS=linux CGO_ENABLED=0 go build -ldflags="-w -s" -o hserver ./main.go
+```
+
+- 第二步：生产镜像阶段\
+  该阶段继承自 `scratch` 镜像，这是一个空白镜像。只需从前上个阶段复制编译后的二进制文件和必要文件即可。最终生成的镜像非常小，仅包含运行 Go 服务所需的内容。
+
+```Dockerfile
+FROM scratch as prod
+# 复制时区文件
+COPY --from=builder /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+# 复制编译后的二进制文件和一些资源文件，如 模板、静态资源等
+COPY --from=builder /go/release/hserver /
+COPY --from=builder /go/release/templates /templates
+COPY --from=builder /go/release/assets /assets
+COPY --from=builder /go/release/config.json/config.json
+COPY --from=builder /go/release/log/gin.log /log/gin.log
+
+# 设置环境变量和端口
+ENV GIN_MODE=release \
+    PORT=8080
+    EXPOSE 8080
+# 启动服务
+CMD ["/hserver"]
+```
+
+## 构建和运行镜像
+
+构建 Docker 镜像后，可以使用以下命令运行它：
+
+```bash
+docker build -t hserver:latest .
+docker run -d --name hserver -p 8080:8080 hserver:latest
+```
+
+## 关于多阶段构建优势的一些
+
+1. 减少镜像大小: 仅将必要的文件复制到最终镜像中，保持镜像精简，从而加快部署速度并降低存储成本。
+2. 安全性: 更小的镜像表面积减少了潜在的漏洞。
+3. 效率: 使用精简的镜像进行构建和部署，提高了性能和启动速度。
+
+## 总结
+
+&emsp;&emsp;通过使用多阶段构建，我们可以将编译和运行所需的所有文件都放在同一个镜像中，从而简化了部署过程。\
+&emsp;&emsp;关于自动化部署，我依然使用了另外一篇文章中提到的方法（[使用 GitHub Actions 自动构建和部署 Docker 镜像](/blog/github-actions-deploy-blog-to-server-docker)），只需将workflows稍加改动即可完成自动化的部署
