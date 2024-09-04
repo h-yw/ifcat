@@ -39,7 +39,7 @@ export async function generateMetadata({
   const date = new Date(post.date)
   const publishedAt = date.toISOString()
   const modifiedAt = new Date(post.lastmod || post.date).toISOString()
-  const formatedDate = `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`
+  const formatedDate = `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}`
   const authors = authorDetails.map((author) => author.name)
   let imageList = [siteMetadata.socialBanner]
   if (post.images) {
