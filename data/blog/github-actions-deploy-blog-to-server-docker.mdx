@@ -162,14 +162,14 @@ outputs:
   uses: actions/checkout@v4
 ```
 
-2. **设置 Docker Buildx**: 使用 docker/setup-buildx-action 来配置 Docker Buildx，支持多平台构建。
+3. **设置 Docker Buildx**: 使用 docker/setup-buildx-action 来配置 Docker Buildx，支持多平台构建。
 
 ```yaml
 - name: Set up Docker Buildx
   uses: docker/setup-buildx-action@v3
 ```
 
-3. **读取当前版本**: 项目根目录有.version文件，用于记录当前版本号。从 .version 文件中读取当前版本号，并将其设置为环境变量，用于计算最新版本号。
+4. **读取当前版本**: 项目根目录有.version文件，用于记录当前版本号。从 .version 文件中读取当前版本号，并将其设置为环境变量，用于计算最新版本号。
 
 ```yaml
 - name: Read current version
@@ -180,7 +180,7 @@ outputs:
     echo "::set-output name=old_version::$VERSION"
 ```
 
-4. **增加版本号**: 将版本号的 patch 部分增加 1，并更新 .version 文件，以便进行版本控制。github推荐使用环境变量，对set-output后续可能不再支持。
+5. **增加版本号**: 将版本号的 patch 部分增加 1，并更新 .version 文件，以便进行版本控制。github推荐使用环境变量，对set-output后续可能不再支持。
 
 ```yaml
 - name: Increment version
@@ -198,7 +198,7 @@ outputs:
 > [!TIP]
 > github推荐使用环境变量，对set-output的形式后续可能不再支持。
 
-5. **构建 Docker 镜像**: 使用 docker build 命令构建新的 Docker 镜像，并为其打上新的版本标签。
+6. **构建 Docker 镜像**: 使用 docker build 命令构建新的 Docker 镜像，并为其打上新的版本标签。
 
 ```yaml
 - name: Build Docker image
@@ -206,7 +206,7 @@ outputs:
     docker build -t moonhou/ifcat:${{ env.NEW_VERSION }} .
 ```
 
-6. **保存 Docker 镜像**: 将构建好的 Docker 镜像保存为 .tar 文件，以便后续上传服务器和部署。
+7. **保存 Docker 镜像**: 将构建好的 Docker 镜像保存为 .tar 文件，以便后续上传服务器和部署。
 
 ```yaml
 - name: Save Docker image to tar file
@@ -214,7 +214,7 @@ outputs:
     docker save moonhou/ifcat:${{ env.NEW_VERSION }} -o ifcat-v${{ env.NEW_VERSION }}.tar
 ```
 
-7. **提交和推送版本更新**: 将更新后的 .version 文件提交到 GitHub 仓库，确保版本号的变化被记录。
+8. **提交和推送版本更新**: 将更新后的 .version 文件提交到 GitHub 仓库，确保版本号的变化被记录。
 
 ```yaml
 - name: Commit and push version update
@@ -226,7 +226,7 @@ outputs:
     author_email: 'github-actions@github.com'
 ```
 
-8. **上传 Docker 镜像文件**: 使用 actions/upload-artifact 上传 .tar 文件，供后续的deploy步骤使用。
+9. **上传 Docker 镜像文件**: 使用 actions/upload-artifact 上传 .tar 文件，供后续的deploy步骤使用。
 
 ```yaml
 - name: Upload Docker image tar file
