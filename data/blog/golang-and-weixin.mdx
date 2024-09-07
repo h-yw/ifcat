@@ -82,10 +82,8 @@ func WXCheckSign(c *gin.Context) {
 
 ## 消息接收和被动消息回复
 
-&emsp;&emsp;消息接收和被动消息回复都是 <kbd style={{ color: '#008880' }}>
-POST
-
-</kbd> 请求。因为使用明文传输的缘故，我这里就不需要加解密操作，请求体和响应体都是明文XML。\
+&emsp;&emsp;消息接收和被动消息回复都是 <kbd style={{ color: '#008880' }}>POST</kbd> 请求。
+因为使用明文传输的缘故，我这里就不需要加解密操作，请求体和响应体都是明文XML。\
 &emsp;&emsp;在这个过程中又坑到自己😭😭。在获取消息时我希望先获取到消息的
 MsgType、FromUserName、ToUserName，然后根据 MsgType 的不同，使用不同的 `struct` 去解析XML。
 因此需要在获取消息的时候多次调用 `c.ShouldBindXML()`，在第二次调用 `c.ShouldBindXML()`
