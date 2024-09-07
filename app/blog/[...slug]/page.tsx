@@ -52,7 +52,7 @@ export async function generateMetadata({
   })
   return {
     title: post.title,
-    description: post.summary,
+    description: post.description || post.summary,
     keywords: post.keywords || siteMetadata.seo.keywords,
     category: `${post.title}-Blog`,
     openGraph: {
