@@ -8,25 +8,17 @@ description: 本文介绍了如何使用Go语言和Gin框架实现微信公众�
 summary: 这两天忽然想把bolg的文章也在微信公众号上也同步一下。当然，目前还是手写的，在公众号编辑器上重新排版。有一说一，官方网页的编辑器有点难用，有想自己写的冲动。不过网上应该有很多公众号排版的工具，可惜没用过，而且大部分都要登录什么的，略显费劲。言规正传，既然要同步公众号，索性就把微信公众号消息推送啥的接入自己跑的Go服务里，本文就记录一下接入过程和遇到的一些问题。
 ---
 
-import { Underline, Color, Blockquote } from '@/components/mdx/index'
-export function Space() {
-  return <>&emsp;&emsp;</>
-}
-
 ## 前言
 
-<Space />
-这两天忽然想把bolg的文章也在微信公众号上也同步一下。当然，目前还是手写的，在公众号编辑器上重新排版。有一说一，官方网页的编辑器有点难用，有想自己写的冲动。不过网上应该有很多公众号排版的工具，可惜没用过，而且大部分都要登录什么的，略显费劲。
-
-<Space />
-言规正传，既然要同步公众号，索性就把微信公众号消息推送啥的接入自己跑的Go服务里，本文就记录一下接入过程和遇到的一些问题。
+&emsp;&emsp;这两天忽然想把bolg的文章也在微信公众号上也同步一下。当然，目前还是手写的，在公众号编辑器上重新排版。有一说一，官方网页的编辑器有点难用，有想自己写的冲动。不过网上应该有很多公众号排版的工具，可惜没用过，而且大部分都要登录什么的，略显费劲。\
+&emsp;&emsp;言规正传，既然要同步公众号，索性就把微信公众号消息推送啥的接入自己跑的Go服务里，本文就记录一下接入过程和遇到的一些问题。
 
 <TOCInline toc={props.toc} exclude="Overview" toHeading={3} />
 
 > [!NOTE/声明]
 >
-> - 后续所有api都在`https://example.com/api/wx`下测试，统称路由`wx`
-> - 验证是对`wx`的GET，消息接受回复是对`wx`的POST，所以要注册两个路由。
+> - 所有api都在`https://example.com/api/wx`下测试，统称路由`wx`
+> - 验证是对`wx`的GET，消息接收回复是对`wx`的POST，所以要注册两个路由。
 > - 路由注册：
 >
 > ```go:routes/route.go
@@ -38,20 +30,18 @@ export function Space() {
 
 ## 配置
 
-<Space />
+&emsp;&emsp;
 微信公众号平台里配置好消息推送的回调地址，同时要配置消息加密的`Token`和`EncodingAESKey`，这里就不多说了。[(微信公众号服务器配置)](https://mp.weixin.qq.com/advanced/advanced?action=dev&t=advanced/dev&lang=zh_CN)
 
 ![微信公众号服务器配置](/static/docker_and_weixin/1.png)
 
 ## api验证
 
-<Space />
-api验证是微信对`wx`接口的 <kbd style={{ color: '#008880' }}>GET</kbd> 请求。验证就是对
+&emsp;&emsp;api验证是微信对`wx`接口的 <kbd style={{ color: '#008880' }}>GET</kbd> 请求。验证就是对
 token、timestamp、nonce
 三个参数进行sha1加密，然后与signature对比。如果对比成功，返回原始`echostr`字符串，否则返回空。
 所有参数都在query中获取。\
-<Space />
-我在做的时候遇到一个坑到自己的小问题😭，就是我调了两次 `c.String()`
+&emsp;&emsp;我在做的时候遇到一个坑到自己的小问题😭，就是我调了两次 `c.String()`
 (其中一次调用其实是一开始调试接口用的，但是忘了删除)，造成返回结果是错误的
 echostr。gin在写入响应值后再次调用还会继续写入，和Express不太一样,Express如果在响应后再次响应就会报错。
 
@@ -92,17 +82,16 @@ func WXCheckSign(c *gin.Context) {
 
 ## 消息接收和被动消息回复
 
-<Space />
-消息接收和被动消息回复都是 <kbd style={{ color: '#008880' }}>
-  POST
+&emsp;&emsp;消息接收和被动消息回复都是 <kbd style={{ color: '#008880' }}>
+POST
+
 </kbd> 请求。因为使用明文传输的缘故，我这里就不需要加解密操作，请求体和响应体都是明文XML。\
-<Space />
-在这个过程中又坑到自己😭😭。在获取消息时我希望先获取到消息的
+&emsp;&emsp;在这个过程中又坑到自己😭😭。在获取消息时我希望先获取到消息的
 MsgType、FromUserName、ToUserName，然后根据 MsgType 的不同，使用不同的 `struct` 去解析XML。
 因此需要在获取消息的时候多次调用 `c.ShouldBindXML()`，在第二次调用 `c.ShouldBindXML()`
 时就出现了只能解析出第一次调用时解析结果的问题。
 
-下面是一个错误的例子:
+**下面是一个错误的例子:**
 
 ```go:错误示例.go
 type WXReceive struct {
@@ -148,7 +137,7 @@ func WXMsgReceive(c *gin.Context) {
 }
 ```
 
-<Space />
+&emsp;&emsp;
 原因大概是因为 HTTP 的 Body 是一个 `io.ReaderCloser`，第一次调用
 `c.ShouldBindXML(&receiveMsg)`时，gin会读取 Body
 的数据流以解析XML的内容，并绑定到结构体中。由于在读取完后，Body 的数据流被关闭，第二次调用
@@ -299,15 +288,15 @@ func WXSubscribeReply(c *gin.Context, fromUser, toUser string) {
 }
 ```
 
-<Space />
-至此，关于微信公众号文本消息和关注事件消息的回复实现就完成了。\
-<Space />
-后边我看到官方有提供一个翻译的接口，就尝试接入了一下。不过在调用的时候需要携带 `access_token` ，会有
+&emsp;&emsp;至此，关于微信公众号文本消息和关注事件消息的回复实现就完成了。\
+&emsp;&emsp;后边我看到官方有提供一个翻译的接口，就尝试接入了一下。不过在调用的时候需要携带 `access_token` ，会有
 access_token 获取和刷新的流程，这里就不展开说了哈哈哈哈哈:smile:，不然会贴更多代码了。
-后边如果有兴致,再写哈哈哈哈哈哈哈哈哈哈:dog:。 ## 总结
-<Space />
-今天的分享就到这里吧😁!
-我也是新手Goer:smile:，边做边学吧哈哈哈哈。其中碰到的一些问题也大多是因为golang学习的不够，继续努力🤭。\
-最后贴一下公众号的二维码吧📱:
+后边如果有兴致,再写哈哈哈哈哈哈哈哈哈哈:dog:。
 
-![公众号二维码](/static/favicons/qrcode_search_standard.png)
+## 总结
+
+&emsp;&emsp;今天的分享就到这里吧😁!我也是新手Goer:smile:，边做边学吧哈哈哈哈。其中碰到的一些问题也大多是因为golang学习的不够，继续努力🤭。
+
+**最后贴一下公众号的二维码吧📱:**
+
+![公众号二维码-如果是只猫](/static/favicons/qrcode_search_standard.png)
