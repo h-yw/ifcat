@@ -1,7 +1,5 @@
 import { Photo } from '@/data/photosData'
 import Image from './Image'
-import { decode } from 'blurhash'
-
 const ImageCard = (props: { photo: Photo }) => {
   const {
     filePath,
@@ -21,14 +19,13 @@ const ImageCard = (props: { photo: Photo }) => {
   } = props.photo
 
   const maker = model?.replace(lensMake, '')
-  console.log(filePath)
   return (
     // className="md max-w-[544px] p-4"
-    <div className="z-100 w-full ">
+    <div className="relative z-10 w-full transform cursor-pointer object-contain transition-transform duration-300 ease-in-out hover:z-[100] hover:scale-105">
       <div
         className={`${
           filePath && 'h-full'
-        }  overflow-hidden rounded-md border-2 border-gray-200 border-opacity-60 dark:border-gray-700`}
+        }  overflow-hidden rounded-md border-2 border-gray-200 border-opacity-60 bg-white dark:border-gray-700`}
       >
         <div className="relative inline-block">
           <Image
@@ -36,9 +33,11 @@ const ImageCard = (props: { photo: Photo }) => {
             title={description}
             src={filePath}
             //   className="object-cover object-center md:h-36 lg:h-48"
-            className="mb-2 transform cursor-pointer object-contain transition-transform duration-300 ease-in-out hover:scale-105"
+            className="mb-2  cursor-pointer object-contain"
             width={imageWidth}
             height={imageHeight}
+            blurDataURL={blur}
+            placeholder="blur"
             quality={50}
           />
           <div className="absolute bottom-4 right-2 rounded bg-black bg-opacity-50 px-2 py-1 text-xs text-white">

@@ -1,14 +1,17 @@
 import path from 'path'
 import fs from 'fs'
 import { exiftool } from 'exiftool-vendored'
-import { encode } from 'blurhash'
+import { decode, encode } from 'blurhash'
 import cliProgress from 'cli-progress'
 import sharp from 'sharp'
 const baseDir = path.resolve('./')
 const publicDir = path.resolve('./public')
 const photosDir = path.join(publicDir, 'static/photos')
 const photosDataPath = path.join(baseDir, 'data/photosData.ts')
-
+const blurSize = {
+  width: 32,
+  height: 32,
+}
 const fileList = readDirectoryRecursive(photosDir)
 // Create a new progress bar instance and use shades_classic theme
 const progressBar = new cliProgress.SingleBar({
@@ -74,20 +77,30 @@ function updatePhotosData(photosData) {
 }
 
 async function encodeImageToBlurhash(imageUrl) {
-  let { data, info } = await sharp(imageUrl).resize(200).ensureAlpha().raw().toBuffer({
+  let { data, info } = await sharp(imageUrl).resize(blurSize.width).ensureAlpha().raw().toBuffer({
     resolveWithObject: true,
   }) //await loadImage(imageUrl)
   // const imageData = getImageData(image)
-  const ratio = 200 / Math.max(info.width, info.height)
+  const ratio = blurSize.width / Math.max(info.width, info.height)
   return encode(new Uint8ClampedArray(data), info.width, info.height, 4, 4)
+}
+async function getImageData(blur) {
+  const pixels = decode(blur, blurSize.width, blurSize.height)
+  const imageBuffer = await sharp(Buffer.from(pixels), {
+    raw: { width: blurSize.width, height: blurSize.height, channels: 4 },
+  })
+    .png() // 转换为 PNG 格式
+    .toBuffer()
+  return `data:image/png;base64,${imageBuffer.toString('base64')}`
 }
 
 async function getExif(file) {
   try {
     const exif = await exiftool.readRaw(file.path)
     const blur = await encodeImageToBlurhash(file.path)
+    const base64 = await getImageData(blur)
     return {
-      blur,
+      blur: base64,
       title: exif.FileName,
       description: '',
       filePath: file.relativePath,
