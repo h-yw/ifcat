@@ -157,7 +157,12 @@ export default makeSource({
       remarkCodeTitles,
       remarkMath,
       remarkImgToJsx,
-      remarkAlert,
+      [
+        remarkAlert,
+        {
+          legacyTitle: true,
+        },
+      ],
       remarkEmoji,
       // remarkBreaks,
     ],
