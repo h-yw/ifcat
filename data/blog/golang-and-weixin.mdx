@@ -1,0 +1,317 @@
+---
+title: Go实现公众号消息接收与回复
+date: 2024-09-06
+tags: [golang, 公众号开发]
+keywords: [Go语言, 微信公众号开发, 被动消息回复, XML解析]
+draft: false
+description: 本文介绍了如何使用Go语言和Gin框架实现微信公众号的消息推送与回复功能，包括API验证、消息接收与被动消息回复的具体实现过程。文章结合实际开发经验，详细解析了过程中遇到的问题及其解决方案，是微信公众号开发者和Go语言爱好者的实用参考。
+summary: 这两天忽然想把bolg的文章也在微信公众号上也同步一下。当然，目前还是手写的，在公众号编辑器上重新排版。有一说一，官方网页的编辑器有点难用，有想自己写的冲动。不过网上应该有很多公众号排版的工具，可惜没用过，而且大部分都要登录什么的，略显费劲。言规正传，既然要同步公众号，索性就把微信公众号消息推送啥的接入自己跑的Go服务里，本文就记录一下接入过程和遇到的一些问题。
+---
+
+import { Underline, Color, Blockquote } from '@/components/mdx/index'
+export function Space() {
+  return <>&emsp;&emsp;</>
+}
+
+## 前言
+
+<Space />
+这两天忽然想把bolg的文章也在微信公众号上也同步一下。当然，目前还是手写的，在公众号编辑器上重新排版。有一说一，官方网页的编辑器有点难用，有想自己写的冲动。不过网上应该有很多公众号排版的工具，可惜没用过，而且大部分都要登录什么的，略显费劲。
+
+<Space />
+言规正传，既然要同步公众号，索性就把微信公众号消息推送啥的接入自己跑的Go服务里，本文就记录一下接入过程和遇到的一些问题。
+
+<TOCInline toc={props.toc} exclude="Overview" toHeading={3} />
+
+> [!NOTE/声明]
+>
+> - 后续所有api都在`https://example.com/api/wx`下测试，统称路由`wx`
+> - 验证是对`wx`的GET，消息接受回复是对`wx`的POST，所以要注册两个路由。
+> - 路由注册：
+>
+> ```go:routes/route.go
+> // 接口验证
+> router.GET("/wx", handlers.WXCheckSign)
+> // 消息接收和被动消息回复
+> router.POST("/wx", handlers.WXHandleMsg)
+> ```
+
+## 配置
+
+<Space />
+微信公众号平台里配置好消息推送的回调地址，同时要配置消息加密的`Token`和`EncodingAESKey`，这里就不多说了。[(微信公众号服务器配置)](https://mp.weixin.qq.com/advanced/advanced?action=dev&t=advanced/dev&lang=zh_CN)
+
+![微信公众号服务器配置](/static/docker_and_weixin/1.png)
+
+## api验证
+
+<Space />
+api验证是微信对`wx`接口的 <kbd style={{ color: '#008880' }}>GET</kbd> 请求。验证就是对
+token、timestamp、nonce
+三个参数进行sha1加密，然后与signature对比。如果对比成功，返回原始`echostr`字符串，否则返回空。
+所有参数都在query中获取。\
+<Space />
+我在做的时候遇到一个坑到自己的小问题😭，就是我调了两次 `c.String()`
+(其中一次调用其实是一开始调试接口用的，但是忘了删除)，造成返回结果是错误的
+echostr。gin在写入响应值后再次调用还会继续写入，和Express不太一样,Express如果在响应后再次响应就会报错。
+
+### 代码实例
+
+```go:handlers/wx.go
+func WXCheckSign(c *gin.Context) {
+	token := "12345"
+    // 获取参数
+	signature := c.DefaultQuery("signature", "")
+	timestamp := c.DefaultQuery("timestamp", "")
+	nonce := c.DefaultQuery("nonce", "")
+	echostr := c.DefaultQuery("echostr", "")
+
+	if signature == "" || timestamp == "" || nonce == "" || echostr == "" {
+		c.String(http.StatusOK, "hello, this is handle view")
+	} else {
+        // 验证逻辑
+		list := []string{
+			token,
+			timestamp,
+			nonce,
+		}
+		sort.Strings(list)
+		concatenated := strings.Join(list, "")
+		hash := sha1.New()
+		hash.Write([]byte(concatenated))
+		hashCode := hex.EncodeToString(hash.Sum(nil))
+
+		if hashCode == signature {
+			c.String(http.StatusOK, echostr)
+		} else {
+			c.String(http.StatusOK, "")
+		}
+	}
+}
+```
+
+## 消息接收和被动消息回复
+
+<Space />
+消息接收和被动消息回复都是 <kbd style={{ color: '#008880' }}>
+  POST
+</kbd> 请求。因为使用明文传输的缘故，我这里就不需要加解密操作，请求体和响应体都是明文XML。\
+<Space />
+在这个过程中又坑到自己😭😭。在获取消息时我希望先获取到消息的
+MsgType、FromUserName、ToUserName，然后根据 MsgType 的不同，使用不同的 `struct` 去解析XML。
+因此需要在获取消息的时候多次调用 `c.ShouldBindXML()`，在第二次调用 `c.ShouldBindXML()`
+时就出现了只能解析出第一次调用时解析结果的问题。
+
+下面是一个错误的例子:
+
+```go:错误示例.go
+type WXReceive struct {
+	ToUserName   string
+	FromUserName string
+	CreateTime   int64
+	MsgType      WXMsgType
+}
+type WXEventMsg struct {
+	ToUserName   string
+	FromUserName string
+	CreateTime   int64
+	MsgType      string
+	Event        string
+}
+// Error:
+func WXMsgReceive(c *gin.Context) {
+	/**
+    body原始数据：
+    <xml>
+        <ToUserName>FromUser</ToUserName>
+        <FromUserName>toUser</FromUserName>
+        <CreateTime>1725551149409</CreateTime>
+        <MsgType>event</MsgType>
+        <Event>subscribe</Event>
+    </xml>
+    */
+	var receiveMsg WXReceive
+    var eventMsg WXEventMsg
+	if err := c.ShouldBindXML(&receiveMsg); err != nil {
+		log.Printf("[消息接收][textMsg] - 解析文本消息失败: %v\n", err)
+	}
+    if err := c.ShouldBindXML(&eventMsg); err != nil {
+        log.Printf("[消息接收][WXEventMsg] - 解析事件消息失败: %v\n", err)
+	}
+    /**
+        此时输出 receiveMsg 和 eventMsg 都是 WXReceive 的结构体，而 eventMsg 里不存在Event字段
+        输出结果如下：
+        receiveMsg:{FromUser, toUser, 1725551149409}
+        eventMsg:{FromUser, toUser, 1725551149409}
+    */
+    log.Printf("textMsg:%v \n eventMsg:%v",textMsg,eventMsg)
+}
+```
+
+<Space />
+原因大概是因为 HTTP 的 Body 是一个 `io.ReaderCloser`，第一次调用
+`c.ShouldBindXML(&receiveMsg)`时，gin会读取 Body
+的数据流以解析XML的内容，并绑定到结构体中。由于在读取完后，Body 的数据流被关闭，第二次调用
+`c.ShouldBindXML(&eventMsg)` 时，gin 无法再从 Body 中读取数据，如果尝试绑定新的 `struct`，gin
+可能会直接使用缓存数据绑定。 解决办法也很简单，就是获取原始 Body，并手动解析。
+
+### 文本消息回复和关注事件消息回复
+
+**结构体定义:**
+
+```go:models/wx.go
+
+// 事件类型
+type EventType string
+// 消息类型
+type WXMsgType string
+
+// 事件类型枚举
+const (
+	EventTypeSubscribe   EventType = "subscribe"
+	EventTypeUnsubscribe EventType = "unsubscribe"
+)
+// 消息类型枚举
+const (
+	WXMsgTypeText       WXMsgType = "text"
+	WXMsgTypeEvent      WXMsgType = "event"
+)
+
+// 消息接收,通用结构
+type WXReceive struct {
+	ToUserName   string
+	FromUserName string
+	CreateTime   int64
+	MsgType      WXMsgType
+}
+// 文本消息
+type WXTextMsg struct {
+	ToUserName   string
+	FromUserName string
+	CreateTime   int64
+	MsgType      WXMsgType
+	Content      string
+	MsgId        int64
+}
+// 事件消息: 处理关注公众号和取消公众号
+type WXEventMsg struct {
+	ToUserName   string
+	FromUserName string
+	CreateTime   int64
+	MsgType      string
+	Event        string
+}
+
+//  文本消息回复
+type WXTextReply struct {
+	ToUserName   string
+	FromUserName string
+	CreateTime   int64
+	MsgType      WXMsgType
+	Content      string
+	// 若不标记XMLName, 则解析后的xml名为该结构体的名称
+	XMLName xml.Name `xml:"xml"`
+}
+
+```
+
+**具体实现**
+
+```go:handlers/wx.go
+func WXMsgReceive(c *gin.Context) {
+    // 获取原始请求体
+	body, err := c.GetRawData()
+	if err != nil {
+		log.Printf("[消息接收] - 获取原始数据失败: %v\n", err)
+		return
+	}
+
+	var rawMsg models.WXReceive
+	if err := xml.Unmarshal(body, &rawMsg); err != nil {
+		log.Printf("[消息接收][rawMsg] - XML数据包解析失败: %v\n", err)
+		WXNewsReply(c, rawMsg.ToUserName, rawMsg.FromUserName, "")
+		return
+	}
+
+	switch rawMsg.MsgType {
+        case models.WXMsgTypeEvent:
+
+            var eventMsg models.WXEventMsg
+            if err := xml.Unmarshal(body, &eventMsg); err != nil {
+                // 解析失败，回复默认消息
+                log.Printf("[消息接收][eventMsg] - 解析文本消息失败: %v\n", err)
+                WXTextReply(c, rawMsg.ToUserName, rawMsg.FromUserName, "")
+                return
+            }
+
+            if eventMsg.Event == string(models.EventTypeSubscribe) {
+                // 公众号关注事件，发送关注欢迎信息
+                log.Printf("[消息接收] - 接收到关注事件消息: %v\n", eventMsg.Event)
+                WXSubscribeReply(c, rawMsg.ToUserName, rawMsg.FromUserName)
+            }
+            return
+        case models.WXMsgTypeText:
+
+            if err := xml.Unmarshal(body, &textMsg); err != nil {
+                log.Printf("[消息接收][textMsg] - 解析文本消息失败: %v\n", err)
+            }
+
+            WXTextReply(c, rawMsg.ToUserName, rawMsg.FromUserName,"")
+	}
+}
+
+// 文本消息回复
+func WXTextReply(c *gin.Context, fromUser, toUser string, content string) {
+	defaultStr := "🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉\n欢迎来到ifcat🐱！这里将会发布一些技术文章，摄影作品等。当然，你也可以留言，我会回复😁。\n你也可以去看我的博客💻<a href=\"https://hlovez.life\">hlovez.life</a>\n\n功能列表：\n\t\t<a href=\"#\" style=\"color:#167829\">翻译：</a>\n\t\t\t\t输入例子：\n\t\t\t\t\t\t[trans]这是要翻译的内容"
+	if content != "" {
+		defaultStr = content
+	}
+	replyTextMsg := models.WXTextReply{
+		ToUserName:   toUser,
+		FromUserName: fromUser,
+		CreateTime:   time.Now().Unix(),
+		MsgType:      models.WXMsgTypeText,
+		Content:      defaultStr,
+	}
+	msg, err := xml.Marshal(replyTextMsg)
+	if err != nil {
+		log.Printf("[消息回复] - 将对象进行XML编码出错: %v\n", err)
+	}
+	_, _ = c.Writer.Write(msg)
+}
+
+// 关注公众号回复 和 WXTextReply 普通文本消息回复一样
+func WXSubscribeReply(c *gin.Context, fromUser, toUser string) {
+
+	replyTextMsg := models.WXTextReply{
+		ToUserName:   toUser,
+		FromUserName: fromUser,
+		CreateTime:   time.Now().Unix(),
+		MsgType:      models.WXMsgTypeText,
+		Content:      fmt.Sprintf("🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉\n欢迎关注ifcat🐱！这里将会发布一些技术文章，摄影作品等。\n当然，你也可以留言，我会回复😁。\n你也可以去看我的博客💻%s\n功能列表：\n\t\t<a href=\"#\" style=\"color:#167829\">翻译</a>：\n\t\t\t\t输入例子：\n\t\t\t\t\t\t[trans]这是要翻译的内容", "<a href=\"https://hlovez.life\">hlovez.life</a>"),
+	}
+	msg, err := xml.Marshal(replyTextMsg)
+	if err != nil {
+		log.Printf("[消息回复] - 将对象进行XML编码出错: %v\n", err)
+
+	}
+	_, _ = c.Writer.Write(msg)
+}
+```
+
+<Space />
+至此，关于微信公众号文本消息和关注事件消息的回复实现就完成了。\
+<Space />
+后边我看到官方有提供一个翻译的接口，就尝试接入了一下。不过在调用的时候需要携带 `access_token` ，会有
+access_token 获取和刷新的流程，这里就不展开说了哈哈哈哈哈:smile:，不然会贴更多代码了。
+后边如果有兴致,再写哈哈哈哈哈哈哈哈哈哈:dog:。
+
+## 总结
+
+<Space />
+今天的分享就到这里吧😁!
+我也是新手Goer:smile:，边做边学吧哈哈哈哈。其中碰到的一些问题也大多是因为golang学习的不够，继续努力🤭。
+
+后边贴一下公众号的二维码吧📱:
+
+![公众号二维码](/static/favicons/qrcode_search_standard.png)
