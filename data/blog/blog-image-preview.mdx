@@ -1,11 +1,11 @@
 ---
-title: 使用 blurhash 优化 photography 页图片展示体验
+title: 使用 blurhash 优化图片加载体验
 date: 2024-09-14
 tags: [blurhash]
-keywords: [ifcat, blurhash]
-description: 使用 blurhash 优化 photography 页图片展示体验
+keywords: [ifcat, 前端图片占位符方案, blurhash, Blurhash图片占位符, 图片加载性能优化]
+description: 本文介绍了如何通过使用Blurhash算法优化图片加载的性能。文章描述了如何编码图片为Blurhash字符串，并通过sharp重整图片大小，最终生成高效的占位符图像，提升用户体验。适用于需要加载大量图片的站点。
 draft: false
-summary: 使用 blurhash 优化 photography 页图片展示体验
+summary: 之前偶然看到 blurhash，它是一种紧凑的图片占位符算法。blurhash通过提取图片中的像素点，生成一个20~30位字符的短字符串。在使用时，将短字符串用blurhash解码为一个base64的占位图即可。从此，我的占位图就再也不是静态纯色底图，而是根据原始图片像素点生成的一个模糊图片了哈哈哈哈哈😄。
 ---
 
 ## 源起
