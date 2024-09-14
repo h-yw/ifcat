@@ -1,0 +1,74 @@
+---
+title: 使用 blurhash 优化图片加载体验
+date: 2024-09-14
+tags: [blurhash]
+keywords: [ifcat, 前端图片占位符方案, blurhash, Blurhash图片占位符, 图片加载性能优化]
+description: 本文介绍了如何通过使用Blurhash算法优化图片加载的性能。文章描述了如何编码图片为Blurhash字符串，并通过sharp重整图片大小，最终生成高效的占位符图像，提升用户体验。适用于需要加载大量图片的站点。
+draft: false
+summary: 之前偶然看到 blurhash，它是一种紧凑的图片占位符算法。blurhash通过提取图片中的像素点，生成一个20~30位字符的短字符串。在使用时，将短字符串用blurhash解码为一个base64的占位图即可。从此，我的占位图就再也不是静态纯色底图，而是根据原始图片像素点生成的一个模糊图片了哈哈哈哈哈😄。
+---
+
+## 源起
+
+&emsp;&emsp;[phtotgraphy页](https://ifcat.org/photo) 的照片都是我后期处理后导出的，导出后的图片有的会很大，导致加载和浏览体验并不是很好。
+
+&emsp;&emsp;之前偶然看到**blurhash**，它是一种紧凑的图片占位符算法。blurhash通过提取图片中的像素点，生成一个20~30位字符的短字符串。在使用时，将短字符串用blurhash解码为一个base64的占位图即可。从此，我的占位图就再也不是静态纯色底图，而是根据原始图片像素点生成的一个模糊图片了哈哈哈哈哈😄。
+
+&emsp;&emsp;有服务端下发图片的时候，可以配合blurhash，将图片和blurhash编码一起下发，让前端根据blurhash解码生成占位图。但是photography页的照片都是本地的（没有OSS😭），所以我都是在添加图片时跑一下脚本，生成一个 json 数据。另外我的解码工作也放在生成 json文件时，事实上json里存的是一个base64的图片。对于静态博客来说，我觉得也没必要在渲染照片时再去解码。
+
+<TOCInline toc={props.toc} exclude="Overview" toHeading={3} />
+
+## 实现
+
+&emsp;&emsp;这里就具体贴一下代码实现。另外，图片过大的话 blurhash encode 的时候会非常耗时（一开始跑脚本卡着不动，我都以为是我的脚本写的有问题😖），我就只好在 encode 前将图片重整大小。因为 **_next/image_** 用 **_sharp_** 来做图片优化，所以我重整图片大小时也用了sharp。
+
+**定义一个常量，用来统一定义重整图片的尺寸。**
+
+```ts
+const blurSize = {
+  width: 32,
+  height: 32,
+}
+```
+
+**encodeImageToBlurhash: 编码图片为blurhash**
+
+```ts
+async function encodeImageToBlurhash(imageUrl) {
+  // 重整大小
+  let { data, info } = await sharp(imageUrl).resize(blurSize.width).ensureAlpha().raw().toBuffer({
+    resolveWithObject: true,
+  })
+
+  return encode(new Uint8ClampedArray(data), info.width, info.height, 4, 4)
+}
+```
+
+**解码blurhash为base64的图片数据**
+
+```ts
+async function getImageData(blur) {
+  const pixels = decode(blur, blurSize.width, blurSize.height)
+  const imageBuffer = await sharp(Buffer.from(pixels), {
+    raw: { width: blurSize.width, height: blurSize.height, channels: 4 },
+  })
+    .png() // 转换为 PNG 格式
+    .toBuffer()
+  return `data:image/png;base64,${imageBuffer.toString('base64')}`
+}
+```
+
+> [!WARNING/提醒]
+> sharp重整大小要和blurhash的尺寸保持一致，否则sharp会报错。
+
+## 展示
+
+![原图->编码->解码](/static/blurhash/blur.png)
+
+## 总结
+
+好了，就是这样了。如果你的博客也有很多图片，可以考虑使用这种方式来玩一下。🔚
+
+## 参考
+
+Blurhash: [https://github.com/woltapp/blurhash](https://github.com/woltapp/blurhash)
