@@ -1,0 +1,193 @@
+---
+title: 使用vite+react开发一个Chrome插件
+date: 2024-10-14
+tags: [Chrome插件, Vite, React]
+keywords: [Chrome插件开发, Chrome 扩展开发教程, Vite + React Chrome 插件, 多页面 Vite 项目]
+draft: false
+summary: 前面我有讲到想自己写一个微信公众号的编辑工具，就花了点时间写了一个用 Markdown 编辑微信公众号的浏览器插件 MP Editor。现在就以 MP Editor 为例，介绍一下如何使用 Vite + React 开发一个Chrome插件。
+description: 本文详细介绍了如何使用 Vite 和 React 开发 Chrome 插件，以 MP Editor 为例，讲解从初始化项目到配置 manifest.json 文件的完整流程。你将学会搭建多页面结构、编写 background 和 content 脚本、实现基本页面交互。文中提供了完整的代码示例和目录结构，让你无需从零开始即可高效开发属于自己的 Chrome 扩展插件。
+---
+
+## 前言
+
+&emsp;&emsp;前面我有讲到想自己写一个微信公众号的编辑工具，就花了点时间写了一个用 Markdown 编辑微信公众号的浏览器插件[MP Editor](https://github.com/h-yw/mp-editor)。现在就以 [MP Editor](https://github.com/h-yw/mp-editor) 为例，介绍一下如何使用 `Vite + React` 开发一个Chrome插件。
+
+<TOCInline toc={props.toc} exclude="Overview" toHeading={3} />
+
+## 准备工作
+
+&emsp;&emsp;我们先创建基本的项目供后续开发。这里会使用 [vite-muilt-page-template](https://github.com/h-yw/vite-muilt-page-template.git)。这是在做 `mp editor` 时抽离出的一个基于vite的多页面项目模板，供之后做项目时参考使用。
+
+1. 下载 [vite-muilt-page-template](https://github.com/h-yw/vite-muilt-page-template.git)
+
+```bash
+git clone --depth 1 https://github.com/h-yw/vite-muilt-page-template.git  chrome-extension-template
+```
+
+2. 安装依赖包
+
+```bash
+yarn install
+```
+
+## 目录结构
+
+基本的目录结构如下：
+
+```bash
+.
+├── README.md
+├── index.html html模板文件
+├── package.json
+├── vite.config.ts
+├── tsconfig.json
+├── .gitignore
+├── html 生成html页面入口
+├── public
+├── scripts
+│   └── pages.js 多页面相关内容脚本
+├── public
+└── src
+    ├── assets
+    │   └── logo.png
+    ├── entries
+    │   ├── index.tsx
+    │   └── index
+    │       ├── index.less
+    │       └── index.tsx
+    └── vite-env.d.ts
+
+```
+
+## 具体实现
+
+### manifest.json配置文件
+
+&emsp;&emsp;`manifest.json` 文件是 Chrome 插件必要的配置文件，它定义了插件的功能、图标、权限等。
+
+&emsp;&emsp;在 `public` 目录下创建 `manifest.json` 文件。内容示例如下：
+
+```json
+{
+  "manifest_version": 3,
+  "name": "MP Editor",
+  "short_name": "MP Editor",
+  "author": "houyw",
+  "version": "1.0.0",
+  "description": "公众号markdown编辑器",
+  "homepage_url": "https://github.com/h-yw/mp-editor",
+  // 图标, 资源在构建结果目录下的images目录中
+  "icons": {
+    "16": "images/mp_16x16.png",
+    "32": "images/mp_32x32.png",
+    "48": "images/mp_48x48.png",
+    "128": "images/mp_128x128.png"
+  },
+  // popup形式的页面，点击扩展图标后弹出的页面
+  // 构建后的文件在dist目录中html目录下，
+  "action": {
+    "default_popup": "html/welcome.html",
+    "default_title": "公众号Markdown编辑器"
+  },
+  //  运行在插件线程中的js文件，无法访问页面DOM等内容
+  "background": {
+    "service_worker": "assets/sw.js"
+  },
+  // 注入到页面的js脚本，可以访问DOM等
+  "content_scripts": [
+    {
+      "matches": ["*://mp.weixin.qq.com/*"],
+      "js": ["assets/mp.js"],
+      "run_at": "document_end"
+    }
+  ],
+  // 侧边栏
+  "side_panel": {
+    "default_path": "html/side-panel.html"
+  },
+  // 权限控制
+  "permissions": [
+    "sidePanel",
+    "tabs",
+    "activeTab",
+    "scripting",
+    "downloads",
+    "storage",
+    "clipboardRead"
+  ],
+  "host_permissions": ["<all_urls>"],
+  "web_accessible_resources": [
+    {
+      "resources": ["assets/onig.wasm"],
+      "matches": ["*://mp.weixin.qq.com/*"]
+    }
+  ],
+  // 安全策略
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';",
+    "sandbox": "sandbox allow-scripts allow-forms allow-popups allow-modals; script-src 'self' 'unsafe-inline' 'unsafe-eval'; child-src 'self';"
+  }
+}
+```
+
+### background脚本和content脚本
+
+1. 在 `src` 下创建 `feature` 目录
+2. 在 `feature` 下新建 `sw.ts` 文件。该文件主要用于一些插件的后台功能，例如监听标签切换等。
+3. 在 `feature` 下新建 `mp.ts` 文件。该文件主要用于注入到页面内。
+
+### vite.config.ts配置文件
+
+首先在 `scripts/pages.ts` 中添加如下内容：
+
+```ts
+export const featurePath = path.join(rootPath, 'src/feature')
+export const featureMap = getDirMap('src/feature/*.ts', '.ts')
+```
+
+更新 `vite.config.ts` 的 `build.rollupOptions.input` 配置如下。
+
+```ts
+export default defineConfig({
+  build: {
+    rollupOptions: {
+      input: { ...input, ...featureMap },
+    },
+  },
+})
+```
+
+### 新建页面
+
+1. 在 `src/entries/welcome` 下新建 `index.tsx` 文件，内容如下：
+
+```tsx
+import React from 'react'
+
+export default function Welcome() {
+  return <div>欢迎使用</div>
+}
+```
+
+2. 在 `src/entries/welcome.tsx` 中引入 `Welcome` 组件，并渲染到页面中。
+
+```tsx
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import Welcome from './welcome/index'
+
+const root = document.getElementById('root')!
+createRoot(root).render(
+  <StrictMode>
+    <Welcome />
+  </StrictMode>
+)
+```
+
+## 总结
+
+&emsp;&emsp;开发一个Chrome插件的所需内容大概就这些了。这里有些内容并没有详细去讲，仅仅是搭建起了开发Chrome插件的基本环境。当然，你依然可以在此基础上快速开发你自己的Chrome插件，不必从0开始😄。
+
+## 一些参考
+
+Chrome插件开发文档： [https://developer.chrome.com/docs/extensions/](https://developer.chrome.com/docs/extensions/)

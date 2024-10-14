@@ -1,4 +1,5 @@
 {
+  "blurhash": 1,
   "golang": 2,
   "公众号开发": 1,
   "docker": 2,
@@ -8,11 +9,5 @@
   "教程": 2,
   "mdx": 1,
   "nextjs": 1,
-  "web": 1,
-  "next-js": 3,
-  "tailwind": 2,
-  "guide": 3,
-  "holiday": 1,
-  "canada": 1,
-  "images": 1
+  "web": 1
 }
