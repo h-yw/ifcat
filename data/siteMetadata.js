@@ -19,7 +19,7 @@ const siteMetadata = {
   // linkedin: 'https://www.linkedin.com',
   // threads: 'https://www.threads.net',
   // instagram: 'https://www.instagram.com',
-  viewOnGithub: true,
+  viewOnGithub: false,
   discussOnTwitter: false,
   locale: 'zh-CN',
   seo: {
