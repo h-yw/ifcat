@@ -9,15 +9,15 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-      
+
     outputs:
       new_version: ${{ steps.increment_version.outputs.new_version }}
       old_version: ${{ steps.get_version.outputs.old_version}}
-      
+
     steps:
       - name: Check out the code
         uses: actions/checkout@v4
-        
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -27,7 +27,6 @@ jobs:
           VERSION=$(cat .version)
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
           echo "::set-output name=old_version::$VERSION"
-
 
       - name: Increment version
         id: increment_version
@@ -40,15 +39,20 @@ jobs:
           echo "::set-output name=new_version::$NEW_VERSION"
           echo "NEW_VERSION=${NEW_VERSION}" >> $GITHUB_ENV
 
-          
       - name: Build Docker image
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
         run: |
-          docker build -t moonhou/ifcat:${{ env.NEW_VERSION }} .
-      
+          docker build \
+            --build-arg NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }} \
+            --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }} \
+            -t moonhou/ifcat:${{ env.NEW_VERSION }} .
+
       - name: Save Docker image to tar file
         run: |
           docker save moonhou/ifcat:${{ env.NEW_VERSION }} -o ifcat-v${{ env.NEW_VERSION }}.tar
-      
+
       - name: Commit and push version update
         uses: EndBug/add-and-commit@v9
         with:
@@ -62,7 +66,7 @@ jobs:
         with:
           name: docker-image
           path: ifcat-v${{ env.NEW_VERSION }}.tar
-      
+
   deploy:
     needs: build
     runs-on: ubuntu-latest
@@ -75,17 +79,17 @@ jobs:
         run: echo "Deploying version ${{ needs.build.outputs.new_version }}"
 
       - name: Install sshpass
-        run: sudo apt-get install -y openssh-client sshpass 
+        run: sudo apt-get install -y openssh-client sshpass
       # sshpass -p $SSH_PRIVATE_KEY
       - name: Add SSH host key
         run: |
           mkdir -p ~/.ssh
           ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
-          
+
       - name: SCP Docker image tar file to server
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          SERVER_PRIVATE_KEY:  ${{ secrets.SERVER_PRIVATE_KEY }}
+          SERVER_PRIVATE_KEY: ${{ secrets.SERVER_PRIVATE_KEY }}
           SERVER_USER: ${{ secrets.SERVER_USER }}
           SERVER_IP: ${{ secrets.SERVER_IP }}
           DEST_PATH: ${{ secrets.SERVER_PATH }}
@@ -115,5 +119,3 @@ jobs:
               echo "deploy new img successfully"
               rm ifcat-v$IMG_VERSION.tar
           EOF
-          
-          

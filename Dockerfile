@@ -1,5 +1,13 @@
 FROM node:20.15.1-alpine AS base
 
+# Use ARG to receive build-time variables
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+# Set these variables as environment variables within the container
+ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
+
 ENV NODE_ENV production
 ENV APP_PATH /app
 

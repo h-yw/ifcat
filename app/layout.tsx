@@ -13,7 +13,7 @@ import { ThemeProviders } from './theme-providers'
 import { Metadata } from 'next'
 import Script from 'next/script'
 import BaiduAnalytics from '@/components/BaiduAnalytics'
-
+import Expose from '@/components/Expose'
 const space_grotesk = Space_Grotesk({
   subsets: ['latin'],
   display: 'swap',
@@ -69,7 +69,6 @@ export const metadata: Metadata = {
     images: [siteMetadata.socialBanner],
   },
 }
-
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const basePath = process.env.BASE_PATH || ''
   const isProduction = process.env.NODE_ENV === 'production'
@@ -112,6 +111,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeProviders>
           <Analytics analyticsConfig={siteMetadata.analytics as AnalyticsConfig} />
           {isProduction && <BaiduAnalytics />}
+          <Expose />
           <SectionContainer>
             <div className="flex h-screen flex-col justify-between font-sans">
               <SearchProvider searchConfig={siteMetadata.search as SearchConfig}>
