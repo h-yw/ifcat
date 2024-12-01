@@ -1,0 +1,163 @@
+---
+title: 使用frp进行内网穿透
+date: 2024-12-01
+tags: [frp, docker]
+keywords: [docker部署frp, 内网穿透, frp内网穿透, frp配置, ifcat]
+draft: false
+summary:   内网穿透是一种将内网中的服务暴露到公网中，使得公网用户可以访问到内网内容的技术。通过内网穿透，可以将自己的设备变成一个文件服务器，供人访问。如果你有一台不断电PC设备，多加几块硬盘，再内网穿透后，你就拥有了可以随时随地访问的网盘（NAS是这么来的？😜）！当然，你需要有一台服务器和公网IP(不知道能不能给家里装宽带的打电话要一个？那还要什么服务器！)。在此记录一下使用frp部署内网穿透的过程。
+---
+
+import Color from '@/components/mdx/Color'
+
+## 前言
+
+&emsp;&emsp;**内网穿透**是一种将内网中的服务暴露到公网中，使得公网用户可以访问到内网内容的技术。通过内网穿透，可以将自己的设备变成一个文件服务器，供人访问。如果你有一台不断电PC设备，多加几块硬盘，再内网穿透后，你就拥有了可以随时随地访问的网盘（NAS是这么来的？😜）！当然，你需要有一台服务器和公网IP(不知道能不能给家里装宽带的打电话要一个？那还要什么服务器！)。
+
+&emsp;&emsp;言归正传，记录一下使用frp部署内网穿透的过程。在服务端我是将frp部署在了docker中，客户端直接跑的frpc。
+
+<TOCInline toc={props.toc} exclude="Overview" toHeading={3} />
+
+## frp的一点内容
+
+&emsp;&emsp;frp是一个简单、高效的内网穿透工具。它支持多种代理类型[吧啦吧啦(不水文字，看官网吧)](https://gofrp.org/zh-cn/)。
+
+&emsp;&emsp;frp主要包括两部分，部署在服务端的 **frps** 和部署在客户端的 **frpc**。另外**frps** 和**frpc** 都有一个配置文件。
+
+## frp 安装
+
+&emsp;&emsp;服务端的frp部署在docker中，直接使用docker compose配置文件即可，具体后边会写到。客户端我是跑在PC上，直接在 frp 的 [release](https://github.com/fatedier/frp/releases) 上下载的 [win64](https://github.com/fatedier/frp/releases/download/v0.61.0/frp_0.61.0_windows_amd64.zip) 版本。
+
+## 服务端部署
+
+&emsp;&emsp;前面有说到，我的frps部署在docker中的，所以包括两个配置文件 `frps.ini` 和 `docker-compose.yml`。文件夹内大概包括以下内容：
+
+```bash
+.
+├── docker-compose.yml
+├── frps.ini
+├── data
+└── data/logs   # 日志文件,做docker volume的映射
+```
+
+### frps的配置文件
+
+服务端frps的配置文件大致如下：
+
+```ini frps.ini
+[common]
+ # frps的监听端口
+bind_port = 7000
+
+# http监听端口，后续公网访问用的到
+vhost_http_port = 8880
+
+ # https监听端口，后续公网https访问时用的到
+vhost_https_port = 8443
+
+# 这个在客户端配置文件中需要，和服务端进行建立连接的验证
+token = "12345678"
+
+# 一级域名被博客用了,所以我把frp服务子域的主域名都放在在二级域名下进行，
+# 后续subdomain都会使 frp.example.com 下的三级域名，如s1.frp.example.com
+subdomain_host = frp.example.com # 域名,
+
+# 日志相关，目录，等级，最大存留天数
+log_file = "/data/logs/"
+log_level = "info"
+log_max_days = 3
+
+# 面板端口，这个是查看frp服务状态的面板
+dashboard_port = 7500
+# 登录面板账号设置
+dashboard_user = "1234"
+dashboard_pwd = "1234"
+
+```
+
+### docker-compose的配置文件
+
+docker部署frps的docker-compose配置文件如下：
+
+```yaml docker-compose.yml
+version: '3.3'
+services:
+  frps:
+    restart: always
+
+    volumes:
+      - ./frps.ini:/etc/frp/frps.ini
+      - ./data:/data
+    container_name: frps
+    image: snowdreamtech/frps
+    ports:
+      - 7000:7000
+      - 7500:7500
+      - 8880:8880
+      - 8443:8443
+    command: -c /etc/frp/frps.ini
+```
+
+### 部署
+
+&emsp;&emsp;直接docker compose部署即可。我使用NPM将域名映射到frps服务的7500端口，这样frp服务面板就可以通过域名访问了。
+
+```bash
+docker-compose up -d
+```
+
+### 验证
+
+&emsp;&emsp;访问 `https://frp.example.com` 即可看到frp的服务状态。
+
+![frp面板](/static/frp/dash.png)
+
+## 客户端部署
+
+&emsp;&emsp;客户端比较简单，只需要 `frpc.toml` 配置文件基本就okay了。
+
+frpc的配置文件大致如下：
+
+```toml frpc.toml
+# 服务端地址ip或者域名都okay
+serverAddr = "xxx.xxx.xxx.xxx"
+# 服务端frps服务端口。如果使用域名，通过nginx代理到7000端口，这里就不用写serverPort，不然会报错。毕竟我犯了这个错误哈哈哈哈哈！
+serverPort = 7000
+
+# 验证方式，这里就是frps.ini中的token
+[auth]
+method= "token"
+token = "12345678"
+
+# 代理配置
+# 我在本地起了一个http服务，端口是8000，所以这里配置的localIp和localPort就是这个http服务。
+# 然后使用subdomain访问，即s1.frp.example.com，需要将s1.frp.example.com代理到8880端口。
+#
+[[proxies]]
+name = "web"
+type = "http"
+localIp="127.0.0.1"
+localPort = 8000
+subdomain="s1"
+```
+
+### 启动frpc
+
+&emsp;&emsp;直接运行frpc即可。
+
+```bash
+frpc -c frpc.toml
+```
+
+运行frpc成功后控制台会显示以下内容：
+
+```bash
+2024-12-01 12:07:00.154 [I] [sub/root.go:142] start frpc service for config file [./frpc.toml]
+2024-12-01 12:07:00.160 [I] [client/service.go:295] try to connect to server...
+2024-12-01 12:07:00.398 [I] [client/service.go:287] [326dac9e7e5d720a] login to server success, get run id [326dac9e7e5d720a]
+2024-12-01 12:07:00.399 [I] [proxy/proxy_manager.go:173] [326dac9e7e5d720a] proxy added: [web]
+2024-12-01 12:07:00.413 [I] [client/control.go:168] [326dac9e7e5d720a] [web] start proxy success
+```
+
+## 总结
+
+&emsp;&emsp;通过以上一通操作，frp服务就部署成功了。可以愉快的玩耍了😄！然鹅...配置域名时还是遇到点问题，造成访问不到（明明dashboard显示有一个http服务了😭）。反正，不是域名有问题，就是端口出错。更可气的是 Edge 不经本人同意将 http 转 https去了，令人暴躁！ 不过更具体的我没记下来哈哈哈哈哈哈哈，再遇到再说吧。

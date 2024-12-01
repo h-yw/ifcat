@@ -1,5 +1,9 @@
 import React from 'react'
 
-export default function Color({ children, c = '#f00' }) {
-  return <span style={{ color: c }}>{children}</span>
+export default function Color({ children, c = '#ec4899' }) {
+  return (
+    <span className={`mx-[2px] rounded-sm bg-opacity-25 px-1 text-white`} style={{ background: c }}>
+      {children}
+    </span>
+  )
 }
