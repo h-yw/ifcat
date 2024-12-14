@@ -111,7 +111,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Analytics analyticsConfig={siteMetadata.analytics as AnalyticsConfig} />
           {isProduction && <BaiduAnalytics />}
           {isProduction && (
-            // <script defer src="https://tongji.hlovez.life/script.js" data-website-id="5ddad081-ef8c-4816-b41f-84844a050e7f"></script>
             <Script
               src="https://tongji.hlovez.life/script.js"
               data-website-id="5ddad081-ef8c-4816-b41f-84844a050e7f"
