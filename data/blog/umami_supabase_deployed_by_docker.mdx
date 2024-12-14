@@ -1,0 +1,91 @@
+---
+title: 使用 umami + supabase 部署自己的网站统计平台
+date: 2024-12-14
+tags: [docker, 技术流]
+draft: false
+keywords: [umami部署, supabase使用, 网站数据统计, 自建网站统计，umami+supabase]
+summary: 今天就讲一下如何在 docker 中部署 umami，以及遇到的坑。umami 的数据库直接使用 supabase 提供的免费资源。
+---
+
+## 前言
+
+&emsp;&emsp;今天就讲一下如何在 docker 中部署 [umami](https://umami.is/)，以及遇到的坑。umami 的数据库直接使用[supabase](https://supabase.com)提供的免费资源。
+
+<TOCInline toc={props.toc} exclude="Overview" toHeading={3} />
+
+## 准备工作
+
+### 在 [supabase](https://supabase.com) 中创建一个项目
+
+&emsp;&emsp;免费用户一个组织只能建两个项目，我已经满了。所以......截图没有了哈哈哈哈哈哈。
+
+&emsp;&emsp;创建完项目以后，在connect中就能看到数据库的连接信息。
+
+![alt](/static/posts/supabase-connect.png)
+
+> [!WARNING/注意]
+> 切记选择 **Transaction pooler** 这个 URI 啊，否则就连不上数据库了！
+
+### 准备 docker compose 文件
+
+```yaml
+version: '3'
+services:
+  umami:
+    image: umamisoftware/umami:postgresql-latest
+    ports:
+      - '9099:9099'
+    environment:
+      DATABASE_URL: postgresql://postgres.[project-id]:[password]@aws-0-ap-southeast-1.pooler.supabase.com:5432/[database] # 这里的连接信息,password就是在supabae组织内新建项目时设置的
+      DATABASE_TYPE: postgresql
+      APP_SECRET: '设置自己的随机值就okay了'
+      PORT: 9099
+    restart: always
+volumes:
+  umami-db-data:
+```
+
+> [!TIP/小贴士]
+> 国内服务器无法访问docker镜像，可以修docker compose文件：
+> `image: docker.umami.is/umami-software/umami:postgresql-latest`
+
+## 原神启动(不是😅)
+
+&emsp;&emsp; `docker-compose.yml`下执行命令
+
+```bash
+docker-compose up -d
+```
+
+&emsp;&emsp; 这就完事了... 然后还要使用nginx做反向代理，讲域名指向docker的ip地址，端口就是**docker-compose.yml**中的映射地址之**9099**。
+
+&emsp;&emsp; 由于我使用了nginx proxy manager来管理nginx，所以直接在nginx proxy manager中添加一个代理，然后就ok了。所以...这里也没有nginx的配置了😅
+
+![nginx proxy manager配置](/static/posts/proxy-9099.png)
+
+## 测试
+
+&emsp;&emsp; 完成域名配置以后，就可以看到你的网站统计了。打开后就是登录页面了。然后就登录自己慢慢玩吧🤭。
+
+```toml:默认账号密码
+账号: admin
+密码: umami
+```
+
+![umami](/static/posts/umami-login.png)
+
+## 遇到的坑
+
+&emsp;&emsp; <span style={{fontWeight:"bold",color:"red"}}>一个巨坑！！！</span>
+
+&emsp;&emsp; 由于我的 nginx proxy manager 也是 docker 部署的，nginx 实在 docker 中，所以 umami 的 docker 服务 ip 需要和 nginx 的 docker 服务 ip 在一个网段，一个网段，一个网段。。。
+
+&emsp;&emsp; 就是说，**nginx proxy manager 在 172.17.0.\* ip 段下的话，umami 的 docker 服务就只能在172.17.0.\* ip 段下。** 否则报504网关超时啊朋友们！😭
+
+## 总结
+
+&emsp;&emsp; 总结就是，umami 的 docker 服务和 nginx proxy manager 在同一个网段下，否则就无法访问。
+
+&emsp;&emsp; docker镜像国内服务器访问不了，很多三方镜像都挂了，有兴趣可以用cloudflare pages和[CF-Workers-docker](https://github.com/cmliu/CF-Workers-docker.io)自行搭建
+
+&emsp;&emsp; 也可以使用vercels快速搭建，只需fork一下umami的仓库，然后再vercels上建一个项目，使用fork的仓库，配置docker-compose.yml中environment变量即可(PORT不需要)。
