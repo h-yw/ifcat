@@ -112,7 +112,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {isProduction && <BaiduAnalytics />}
           {isProduction && (
             <Script
-              src="https://umami-indol-six.vercel.app/script.js"
+              src="https://tongji.hlovez.life/script.js"
               data-website-id="5ddad081-ef8c-4816-b41f-84844a050e7f"
               defer
             />
